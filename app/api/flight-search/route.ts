@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { searchFlightsWithDuffel } from "@/lib/duffelFlightSearch";
 import { searchFlightsWithTravelpayouts } from "@/lib/travelpayoutsFlightSearch";
 
+export const dynamic = "force-dynamic";
+
 type Cabin = "economy" | "premium_economy" | "business" | "first";
 
 function resolveRequestHost(req: NextRequest): string {
@@ -10,26 +12,29 @@ function resolveRequestHost(req: NextRequest): string {
   return req.headers.get("host") || "localhost";
 }
 
-/**
- * Prefer end-user IP for Travelpayouts (localhost is rejected). Optional override for local dev.
- */
+/** Travelpayouts requires a non-loopback visitor IP; Vercel sends x-forwarded-for / x-vercel-forwarded-for. */
 function resolveUserIp(req: NextRequest): string {
   const override = process.env.TRAVELPAYOUTS_USER_IP?.trim();
   if (override) return override;
-  const xff = req.headers.get("x-forwarded-for");
-  if (xff) {
-    const first = xff.split(",")[0]!.trim();
-    if (first && !first.startsWith("127.")) return first;
+
+  const candidates = [
+    req.headers.get("x-vercel-forwarded-for"),
+    req.headers.get("cf-connecting-ip"),
+    req.headers.get("x-forwarded-for"),
+    req.headers.get("x-real-ip"),
+  ];
+
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const first = raw.split(",")[0]!.trim();
+    if (first && !first.startsWith("127.") && first !== "::1") return first;
   }
-  const realIp = req.headers.get("x-real-ip")?.trim();
-  if (realIp && !realIp.startsWith("127.")) return realIp;
   return "";
 }
 
 /**
  * Standard flight search: origin, destination, dates → ranked offers.
- * Uses Travelpayouts real-time search when `TRAVELPAYOUTS_API_TOKEN` + public marker are set
- * (aligned price + booking link); otherwise Duffel + Kiwi deep link.
+ * Travelpayouts when token + marker + client IP exist; otherwise Duffel + Kiwi deep link.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -54,19 +59,8 @@ export async function POST(req: NextRequest) {
     };
 
     const canTravelpayouts = Boolean(tpToken && marker);
-    if (canTravelpayouts) {
-      const userIp = resolveUserIp(req);
-      if (!userIp) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Travelpayouts needs a real client IP (forbidden: 127.0.0.1). Deploy behind a proxy or set TRAVELPAYOUTS_USER_IP in .env.local for testing.",
-          },
-          { status: 400 },
-        );
-      }
-
+    const userIp = canTravelpayouts ? resolveUserIp(req) : "";
+    if (canTravelpayouts && userIp) {
       try {
         const tpOffers = await searchFlightsWithTravelpayouts({
           apiToken: tpToken!,
@@ -76,28 +70,19 @@ export async function POST(req: NextRequest) {
           ...common,
         });
         if (tpOffers.length > 0) {
-          return NextResponse.json({
-            ok: true,
-            offers: tpOffers,
-            source: "travelpayouts",
-            disclaimer:
-              "Prices and itineraries come from Travelpayouts search. Tap Book to open the agency site; that link expires in about 15 minutes.",
-          });
+          return NextResponse.json({ ok: true, offers: tpOffers, source: "travelpayouts" });
         }
       } catch (e) {
         console.error("[api/flight-search] Travelpayouts failed, will try Duffel if configured", e);
       }
+    } else if (canTravelpayouts && !userIp) {
+      console.warn("[api/flight-search] skipping Travelpayouts: no client IP in request headers");
     }
 
     if (!duffelToken) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: canTravelpayouts
-            ? "Travelpayouts returned no results and DUFFEL_ACCESS_TOKEN is not set for fallback."
-            : "Server missing DUFFEL_ACCESS_TOKEN (or set TRAVELPAYOUTS_API_TOKEN + NEXT_PUBLIC_TRAVELPAYOUTS_MARKER for Travelpayouts-only search).",
-        },
-        { status: 500 },
+        { ok: false, error: "Search is temporarily unavailable. Please try again later." },
+        { status: 503 },
       );
     }
 
@@ -107,17 +92,11 @@ export async function POST(req: NextRequest) {
       ...common,
     });
 
-    return NextResponse.json({
-      ok: true,
-      offers,
-      source: "duffel",
-      disclaimer:
-        "Prices come from Duffel. The Kiwi button pre-fills the same route and dates for your affiliate id; Kiwi’s live fare may differ.",
-    });
+    return NextResponse.json({ ok: true, offers, source: "duffel" });
   } catch (e) {
     console.error("[api/flight-search]", e);
     return NextResponse.json(
-      { ok: false, error: "Flight search failed. Check server logs." },
+      { ok: false, error: "Something went wrong. Please try again." },
       { status: 500 },
     );
   }

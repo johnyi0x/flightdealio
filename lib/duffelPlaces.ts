@@ -27,6 +27,7 @@ export async function fetchDuffelPlaceSuggestions(input: {
   console.log("[Duffel] GET places/suggestions", Object.fromEntries(params));
 
   const res = await fetch(url, {
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       "Duffel-Version": "v2",

@@ -31,11 +31,7 @@ export function ResultsView() {
         if (!cancelled) setPayload(json);
       } catch {
         if (!cancelled) {
-          setPayload({
-            ok: false,
-            error:
-              "Network error while calling /api/search. Confirm `npm run dev` is running and try again.",
-          });
+          setPayload({ ok: false, error: "Network error. Please check your connection and try again." });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -57,7 +53,7 @@ export function ResultsView() {
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-        Calling Duffel and building your short list…
+        Loading results…
       </div>
     );
   }

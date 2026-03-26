@@ -49,17 +49,16 @@ function BookOrKiwi({ offer }: { offer: FlightOfferPublic }) {
     <a
       href={offer.affiliateUrl}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer sponsored"
       className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
     >
-      Find this deal on Kiwi
+      View on Kiwi.com
     </a>
   );
 }
 
 type Stored = {
   offers: FlightOfferPublic[];
-  disclaimer?: string;
   meta?: {
     origin: string;
     destination: string;
@@ -100,7 +99,7 @@ export function FlightResultsView() {
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-          No cached flight results. Run a search from the home page first.
+          No results here yet. Start a search from the home page.
         </div>
         <Link href="/" className="text-sm font-semibold text-sky-700 underline dark:text-sky-400">
           Back to flight search
@@ -117,11 +116,6 @@ export function FlightResultsView() {
           {data.meta.returnDate ? ` · Back ${data.meta.returnDate}` : " · One way"}
         </p>
       )}
-      {data.disclaimer && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300">
-          {data.disclaimer}
-        </div>
-      )}
       <div className="space-y-4">
         {data.offers.map((offer) => (
           <article
@@ -136,10 +130,9 @@ export function FlightResultsView() {
                 </p>
                 {offer.emissionsKg && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Est. emissions {offer.emissionsKg} kg CO₂e (from Duffel)
+                    Est. emissions {offer.emissionsKg} kg CO₂e
                   </p>
                 )}
-                <p className="text-xs text-slate-400">Offer id {offer.id}</p>
               </div>
               <BookOrKiwi offer={offer} />
             </div>

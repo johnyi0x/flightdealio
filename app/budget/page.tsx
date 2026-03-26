@@ -26,11 +26,6 @@ export default function BudgetPage() {
       </div>
 
       <SearchForm />
-
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        Results open on <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">/results</code> after
-        you submit.
-      </p>
     </div>
   );
 }

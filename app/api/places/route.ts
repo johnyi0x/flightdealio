@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchDuffelPlaceSuggestions } from "@/lib/duffelPlaces";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Autocomplete airports/cities for the flight search form (Duffel Places API).
  */
 export async function GET(req: NextRequest) {
   const token = process.env.DUFFEL_ACCESS_TOKEN;
   if (!token) {
-    return NextResponse.json(
-      { ok: false, error: "Missing DUFFEL_ACCESS_TOKEN on server." },
-      { status: 500 },
-    );
+    console.error("[api/places] missing flight data token");
+    return NextResponse.json({ ok: false, places: [] }, { status: 503 });
   }
 
   const q = (new URL(req.url).searchParams.get("q") || "").trim();

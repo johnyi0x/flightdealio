@@ -10,8 +10,7 @@ type PlaceRow = {
 };
 
 /**
- * Type-ahead airport/city picker backed by `/api/places` so travelers can search
- * “Atlanta” instead of guessing `ATL`.
+ * Type-ahead airport/city picker backed by `/api/places`.
  */
 export function AirportField({
   name,
@@ -27,20 +26,31 @@ export function AirportField({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<PlaceRow[]>([]);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const runSearch = useCallback(async (q: string) => {
     if (q.trim().length < 2) {
       setRows([]);
+      setSuggestError(null);
       return;
     }
     setLoading(true);
+    setSuggestError(null);
     try {
-      const res = await fetch(`/api/places?q=${encodeURIComponent(q.trim())}`);
+      const res = await fetch(`/api/places?q=${encodeURIComponent(q.trim())}`, {
+        cache: "no-store",
+      });
       const json = (await res.json()) as { ok?: boolean; places?: PlaceRow[] };
+      if (!res.ok || json.ok === false) {
+        setRows([]);
+        setSuggestError("Suggestions unavailable right now.");
+        return;
+      }
       setRows(json.places ?? []);
     } catch {
       setRows([]);
+      setSuggestError("Suggestions unavailable right now.");
     } finally {
       setLoading(false);
     }
@@ -72,8 +82,10 @@ export function AirportField({
     setOpen(false);
   }
 
+  const showList = open && rows.length > 0;
+
   return (
-    <div ref={wrapRef} className="relative space-y-1 text-sm">
+    <div ref={wrapRef} className="relative z-[100] space-y-1 text-sm">
       <label className="block">
         <span className="font-medium text-slate-800 dark:text-slate-200">{label}</span>
         <input
@@ -95,14 +107,17 @@ export function AirportField({
         {iata
           ? `Selected: ${iata}`
           : required
-            ? "Pick a row below to lock the IATA code."
+            ? "Choose a suggestion to set the airport code."
             : "Optional — pick from suggestions."}
         {loading ? " · Searching…" : ""}
       </p>
-      {open && rows.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900">
+      {open && suggestError && (
+        <p className="text-xs text-amber-700 dark:text-amber-400">{suggestError}</p>
+      )}
+      {showList && (
+        <ul className="absolute z-[200] mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900">
           {rows.map((r, idx) => (
-            <li key={`${r.iata_code}-${idx}`}>
+            <li key={`${idx}-${r.label}`}>
               <button
                 type="button"
                 className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800"

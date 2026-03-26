@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const CLICK_BASE = "https://api.travelpayouts.com/v1/flight_searches";
 
 type Body = { searchId?: string; termsUrl?: number };
@@ -10,10 +12,7 @@ type Body = { searchId?: string; termsUrl?: number };
 export async function POST(req: NextRequest) {
   const token = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
   if (!token) {
-    return NextResponse.json(
-      { ok: false, error: "Server missing TRAVELPAYOUTS_API_TOKEN." },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: "Booking link unavailable." }, { status: 503 });
   }
 
   let body: Body;

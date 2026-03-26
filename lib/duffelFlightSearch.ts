@@ -113,6 +113,7 @@ export async function searchFlightsWithDuffel(input: {
 
   const res = await fetch(url, {
     method: "POST",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",

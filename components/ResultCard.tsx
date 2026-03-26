@@ -56,10 +56,10 @@ export function ResultCard({
       <a
         href={row.affiliateFlightsUrl}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer sponsored"
         className="inline-flex w-full items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 sm:w-auto"
       >
-        Find this deal on Kiwi
+        View on Kiwi.com
       </a>
     </article>
   );

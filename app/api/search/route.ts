@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runBudgetSearch } from "@/lib/budgetSearch";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Budget explorer search (sampled destinations). Secrets stay server-side.
  */
@@ -17,12 +19,8 @@ export async function GET(req: NextRequest) {
 
     if (!token) {
       return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Server missing DUFFEL_ACCESS_TOKEN. In Duffel dashboard create a test token, add it to .env.local, then restart `npm run dev`.",
-        },
-        { status: 500 },
+        { ok: false, error: "Search is temporarily unavailable. Please try again later." },
+        { status: 503 },
       );
     }
 
@@ -43,11 +41,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error("[api/search] failed", e);
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Something went wrong talking to a travel data provider. Check the terminal logs for the raw error, then try again.",
-      },
+      { ok: false, error: "Something went wrong. Please try again in a moment." },
       { status: 500 },
     );
   }

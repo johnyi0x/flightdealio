@@ -14,9 +14,9 @@ export function buildKiwiFlightsDeepLink(input: {
   departure: string;
   returnDate?: string | null;
 }): string {
-  const marker = input.marker || "YOUR_MARKER";
+  const marker = input.marker.trim();
   const q = new URLSearchParams();
-  q.set("affilid", marker);
+  if (marker) q.set("affilid", marker);
   q.set("from", input.from.toUpperCase());
   q.set("to", input.to.toUpperCase());
   q.set("departure", input.departure);
