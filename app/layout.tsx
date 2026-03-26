@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
@@ -22,6 +23,15 @@ export default function RootLayout({
             __html: `(function(){try{var stored=localStorage.getItem('theme_choice');var choice=stored||'dark';var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=(choice==='dark')?true:(choice==='light')?false:!!prefersDark;document.documentElement.classList.toggle('dark',isDark);}catch(e){/* ignore */}})();`,
           }}
         />
+        {/* Travelpayouts site verification — loads their checker script into <head>. Remove if they confirm you can after approval. */}
+        <Script id="travelpayouts-site-verify" strategy="afterInteractive">
+          {`(function () {
+    var script = document.createElement("script");
+    script.async = 1;
+    script.src = "https://emrldtp.cc/NTEyMDA2.js?t=512006";
+    document.head.appendChild(script);
+  })();`}
+        </Script>
         <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4">
             <Link
