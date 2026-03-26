@@ -52,13 +52,15 @@ function BookOrKiwi({ offer }: { offer: FlightOfferPublic }) {
       rel="noopener noreferrer sponsored"
       className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
     >
-      View on Kiwi.com
+      Search on Kiwi.com
     </a>
   );
 }
 
 type Stored = {
   offers: FlightOfferPublic[];
+  /** `travelpayouts` = book links match the listed fare; `duffel` = Kiwi is a fresh search. */
+  source?: "duffel" | "travelpayouts";
   meta?: {
     origin: string;
     destination: string;
@@ -114,6 +116,16 @@ export function FlightResultsView() {
         <p className="text-sm text-slate-600 dark:text-slate-400">
           {data.meta.origin} → {data.meta.destination} · Out {data.meta.departureDate}
           {data.meta.returnDate ? ` · Back ${data.meta.returnDate}` : " · One way"}
+        </p>
+      )}
+      {data.source === "travelpayouts" && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Book opens the partner site for the option you pick (Travelpayouts).
+        </p>
+      )}
+      {data.source === "duffel" && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Fares are from our flight data partner. Kiwi links pre-fill this trip; final price is on Kiwi.
         </p>
       )}
       <div className="space-y-4">

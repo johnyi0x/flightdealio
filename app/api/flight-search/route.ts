@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIpForTravelpayouts, getClientIpFromRequest } from "@/lib/clientIp";
+import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 import { searchFlightsWithDuffel } from "@/lib/duffelFlightSearch";
 import { searchFlightsWithTravelpayouts } from "@/lib/travelpayoutsFlightSearch";
 
@@ -12,32 +14,21 @@ function resolveRequestHost(req: NextRequest): string {
   return req.headers.get("host") || "localhost";
 }
 
-/** Travelpayouts requires a non-loopback visitor IP; Vercel sends x-forwarded-for / x-vercel-forwarded-for. */
-function resolveUserIp(req: NextRequest): string {
-  const override = process.env.TRAVELPAYOUTS_USER_IP?.trim();
-  if (override) return override;
-
-  const candidates = [
-    req.headers.get("x-vercel-forwarded-for"),
-    req.headers.get("cf-connecting-ip"),
-    req.headers.get("x-forwarded-for"),
-    req.headers.get("x-real-ip"),
-  ];
-
-  for (const raw of candidates) {
-    if (!raw) continue;
-    const first = raw.split(",")[0]!.trim();
-    if (first && !first.startsWith("127.") && first !== "::1") return first;
-  }
-  return "";
-}
-
 /**
  * Standard flight search: origin, destination, dates → ranked offers.
  * Travelpayouts when token + marker + client IP exist; otherwise Duffel + Kiwi deep link.
  */
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIpFromRequest(req);
+    const flightCap = rateLimitMax("RATE_LIMIT_FLIGHT_SEARCH_PER_MIN", 30);
+    if (!allowRateLimit("flight-search", ip, flightCap)) {
+      return NextResponse.json(
+        { ok: false, error: "Too many searches. Please wait a minute and try again." },
+        { status: 429 },
+      );
+    }
+
     const duffelToken = process.env.DUFFEL_ACCESS_TOKEN;
     const tpToken = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
     const marker = (process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || "").trim();
@@ -59,7 +50,7 @@ export async function POST(req: NextRequest) {
     };
 
     const canTravelpayouts = Boolean(tpToken && marker);
-    const userIp = canTravelpayouts ? resolveUserIp(req) : "";
+    const userIp = canTravelpayouts ? getClientIpForTravelpayouts(req) : "";
     if (canTravelpayouts && userIp) {
       try {
         const tpOffers = await searchFlightsWithTravelpayouts({

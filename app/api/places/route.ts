@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIpFromRequest } from "@/lib/clientIp";
+import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 import { fetchDuffelPlaceSuggestions } from "@/lib/duffelPlaces";
 
 export const dynamic = "force-dynamic";
@@ -7,29 +9,40 @@ export const dynamic = "force-dynamic";
  * Autocomplete airports/cities for the flight search form (Duffel Places API).
  */
 export async function GET(req: NextRequest) {
-  const token = process.env.DUFFEL_ACCESS_TOKEN;
-  if (!token) {
-    console.error("[api/places] missing flight data token");
-    return NextResponse.json({ ok: false, places: [] }, { status: 503 });
+  try {
+    const ip = getClientIpFromRequest(req);
+    const cap = rateLimitMax("RATE_LIMIT_PLACES_PER_MIN", 120);
+    if (!allowRateLimit("places", ip, cap)) {
+      return NextResponse.json({ ok: false, places: [] }, { status: 429 });
+    }
+
+    const token = process.env.DUFFEL_ACCESS_TOKEN?.trim();
+    if (!token) {
+      console.error("[api/places] missing flight data token");
+      return NextResponse.json({ ok: false, places: [] }, { status: 503 });
+    }
+
+    const q = (new URL(req.url).searchParams.get("q") || "").trim();
+    if (q.length < 2) {
+      return NextResponse.json({ ok: true, places: [] });
+    }
+
+    const places = await fetchDuffelPlaceSuggestions({ token, query: q });
+    const slim = places.slice(0, 12).map((p) => ({
+      type: p.type,
+      name: p.name,
+      iata_code: p.iata_code,
+      iata_city_code: p.iata_city_code,
+      city_name: p.city_name,
+      country: p.iata_country_code,
+      label: formatPlaceLabel(p),
+    }));
+
+    return NextResponse.json({ ok: true, places: slim });
+  } catch (e) {
+    console.error("[api/places]", e);
+    return NextResponse.json({ ok: false, places: [] }, { status: 500 });
   }
-
-  const q = (new URL(req.url).searchParams.get("q") || "").trim();
-  if (q.length < 2) {
-    return NextResponse.json({ ok: true, places: [] });
-  }
-
-  const places = await fetchDuffelPlaceSuggestions({ token, query: q });
-  const slim = places.slice(0, 12).map((p) => ({
-    type: p.type,
-    name: p.name,
-    iata_code: p.iata_code,
-    iata_city_code: p.iata_city_code,
-    city_name: p.city_name,
-    country: p.iata_country_code,
-    label: formatPlaceLabel(p),
-  }));
-
-  return NextResponse.json({ ok: true, places: slim });
 }
 
 function formatPlaceLabel(p: {

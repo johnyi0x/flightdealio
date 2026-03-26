@@ -35,7 +35,12 @@ export async function fetchDuffelPlaceSuggestions(input: {
     },
   });
 
-  const json = (await res.json()) as DuffelPlacesResponse & { errors?: unknown };
+  let json: DuffelPlacesResponse & { errors?: unknown };
+  try {
+    json = (await res.json()) as DuffelPlacesResponse & { errors?: unknown };
+  } catch {
+    return [];
+  }
   console.log("[Duffel] places/suggestions response count", json.data?.length ?? 0);
 
   if (!res.ok) return [];

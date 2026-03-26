@@ -49,6 +49,7 @@ export function FlightSearchForm() {
         ok?: boolean;
         error?: string;
         offers?: unknown;
+        source?: string;
       };
       if (!json.ok) {
         setError(json.error || "Search failed.");
@@ -58,6 +59,7 @@ export function FlightSearchForm() {
         "flight_search_payload",
         JSON.stringify({
           offers: json.offers,
+          source: json.source === "travelpayouts" ? "travelpayouts" : "duffel",
           meta: { origin, destination, departureDate, returnDate: trip === "round" ? returnDate : null },
         }),
       );

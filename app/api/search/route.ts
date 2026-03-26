@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIpFromRequest } from "@/lib/clientIp";
+import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 import { runBudgetSearch } from "@/lib/budgetSearch";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +10,15 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   try {
+    const ip = getClientIpFromRequest(req);
+    const cap = rateLimitMax("RATE_LIMIT_BUDGET_SEARCH_PER_MIN", 20);
+    if (!allowRateLimit("budget-search", ip, cap)) {
+      return NextResponse.json(
+        { ok: false, error: "Too many searches. Please wait a minute and try again." },
+        { status: 429 },
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const parsed = parseSearchParams(searchParams);
     if (!parsed.ok) {

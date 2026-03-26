@@ -53,14 +53,19 @@ export function ResultCard({
         {row.dealExplanation}
       </p>
 
-      <a
-        href={row.affiliateFlightsUrl}
-        target="_blank"
-        rel="noopener noreferrer sponsored"
-        className="inline-flex w-full items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 sm:w-auto"
-      >
-        View on Kiwi.com
-      </a>
+      <div className="space-y-1">
+        <a
+          href={row.affiliateFlightsUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 sm:w-auto"
+        >
+          Search on Kiwi.com
+        </a>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          Opens Kiwi with these dates; fare may differ from the estimate above.
+        </p>
+      </div>
     </article>
   );
 }

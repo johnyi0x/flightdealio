@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClientIpFromRequest } from "@/lib/clientIp";
+import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,12 @@ type Body = { searchId?: string; termsUrl?: number };
  * Resolves a short-lived booking URL for one Travelpayouts search result (user-initiated only).
  */
 export async function POST(req: NextRequest) {
+  const ip = getClientIpFromRequest(req);
+  const cap = rateLimitMax("RATE_LIMIT_TRAVELPAYOUTS_CLICK_PER_MIN", 45);
+  if (!allowRateLimit("tp-click", ip, cap)) {
+    return NextResponse.json({ ok: false, error: "Too many requests. Try again shortly." }, { status: 429 });
+  }
+
   const token = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
   if (!token) {
     return NextResponse.json({ ok: false, error: "Booking link unavailable." }, { status: 503 });
