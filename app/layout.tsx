@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+        <Analytics />
       </body>
     </html>
   );
