@@ -3,6 +3,18 @@ import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "
 
 const PRICES_FOR_DATES = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates";
 
+/** Currencies where Aviasales v3 `prices_for_dates` uses smallest units (e.g. cents) as integers. */
+const TP_V3_MINOR_UNIT = new Set([
+  "usd",
+  "eur",
+  "gbp",
+  "aud",
+  "cad",
+  "chf",
+  "pln",
+  "nzd",
+]);
+
 type TpPriceRow = {
   origin?: string;
   destination?: string;
@@ -16,10 +28,35 @@ type TpPriceRow = {
   return_at?: string;
   transfers?: number;
   return_transfers?: number;
+  duration_to?: number;
+  duration_back?: number;
+  duration?: number;
   link?: string;
 };
 
-export type TravelpayoutsDealsTier = "exact" | "month" | "none";
+export type TravelpayoutsDealsTier = "exact" | "none";
+
+/**
+ * Aviasales v3 returns integer `price` in minor units for USD/EUR/… (e.g. 10592 → 105.92 USD).
+ * Fractional values are treated as already in major units.
+ */
+function tpV3PriceToMajorUnits(price: number, currencyRaw: string): number {
+  const c = (currencyRaw || "usd").trim().toLowerCase();
+  if (!TP_V3_MINOR_UNIT.has(c)) return price;
+  if (!Number.isFinite(price)) return price;
+  if (!Number.isInteger(price)) return price;
+  return price / 100;
+}
+
+function arrivesAfterDuration(depIso: string, durationMinutes: number | undefined): string {
+  if (!depIso?.trim()) return "";
+  if (durationMinutes == null || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return "";
+  }
+  const ms = Date.parse(depIso);
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms + durationMinutes * 60_000).toISOString();
+}
 
 /**
  * Partner landing URL: relative `link` from API + base host + marker (Travelpayouts attribution).
@@ -55,13 +92,16 @@ function buildSlices(row: TpPriceRow): FlightSlicePublic[] {
   const airlineLabel =
     airline || (stopsOut > 0 ? `${stopsOut} stop(s) outbound` : "Flight");
 
+  const depOut = row.departure_at || "";
+  const arrOut = arrivesAfterDuration(depOut, row.duration_to);
+
   const outSeg: FlightSegmentPublic = {
     originCode: o,
     originName: o,
     destCode: d,
     destName: d,
-    departsAt: row.departure_at || "",
-    arrivesAt: row.departure_at || "",
+    departsAt: depOut,
+    arrivesAt: arrOut,
     airlineName: airlineLabel,
     airlineIata: airline || undefined,
     flightNumber: fn || (stopsOut > 0 ? `${stopsOut} stop(s)` : ""),
@@ -73,13 +113,15 @@ function buildSlices(row: TpPriceRow): FlightSlicePublic[] {
     const stopsBack = row.return_transfers ?? 0;
     const backLabel =
       airline || (stopsBack > 0 ? `${stopsBack} stop(s) return` : "Flight");
+    const depRet = row.return_at;
+    const arrRet = arrivesAfterDuration(depRet, row.duration_back);
     const retSeg: FlightSegmentPublic = {
       originCode: d,
       originName: d,
       destCode: o,
       destName: o,
-      departsAt: row.return_at,
-      arrivesAt: row.return_at,
+      departsAt: depRet,
+      arrivesAt: arrRet,
       airlineName: backLabel,
       airlineIata: airline || undefined,
       flightNumber: fn || (stopsBack > 0 ? `${stopsBack} stop(s)` : ""),
@@ -167,11 +209,12 @@ async function fetchTravelpayoutsPricesOnce(input: {
       continue;
     }
 
-    const price = Number(row.price);
-    if (!Number.isFinite(price) || price <= 0) continue;
+    const rawPrice = Number(row.price);
+    if (!Number.isFinite(rawPrice) || rawPrice <= 0) continue;
 
     const cur = (row.currency || "usd").toString();
-    const totalUsd = await convertToUsd(price, cur);
+    const major = tpV3PriceToMajorUnits(rawPrice, cur);
+    const totalUsd = await convertToUsd(major, cur);
     if (totalUsd === null) continue;
 
     let referralUrl: string;
@@ -198,7 +241,8 @@ async function fetchTravelpayoutsPricesOnce(input: {
 }
 
 /**
- * Cached deals: try **exact dates** first, then **YYYY-MM** (often has rows when day-level cache is empty).
+ * Cached deals for the **exact** dates only (same as the user’s search).
+ * No month-wide fallback — that showed wrong dates vs the search and looked broken.
  */
 export async function fetchTravelpayoutsDataDeals(input: {
   apiToken: string;
@@ -217,46 +261,24 @@ export async function fetchTravelpayoutsDataDeals(input: {
       offers: FlightOfferPublic[];
       emptyHint?: string;
       cacheTier: TravelpayoutsDealsTier;
-      monthMatchDisclaimer?: string;
     }
   | { ok: false; error: string; status?: number }
 > {
-  const base = {
+  const exact = await fetchTravelpayoutsPricesOnce({
     apiToken: input.apiToken,
     marker: input.marker,
     dealBaseUrl: input.dealBaseUrl,
     market: input.market,
     origin: input.origin,
     destination: input.destination,
-    directOnly: input.directOnly,
-    limit: input.limit,
-  };
-
-  const exact = await fetchTravelpayoutsPricesOnce({
-    ...base,
     departureAt: input.departureDate,
     returnAt: input.returnDate,
+    directOnly: input.directOnly,
+    limit: input.limit,
   });
   if (!exact.ok) return { ok: false, error: exact.error, status: exact.status };
   if (exact.offers.length > 0) {
     return { ok: true, offers: exact.offers, cacheTier: "exact" };
-  }
-
-  const depMonth = input.departureDate.slice(0, 7);
-  const retMonth = input.returnDate ? input.returnDate.slice(0, 7) : null;
-  const month = await fetchTravelpayoutsPricesOnce({
-    ...base,
-    departureAt: depMonth,
-    returnAt: retMonth,
-  });
-  if (!month.ok) return { ok: false, error: month.error, status: month.status };
-  if (month.offers.length > 0) {
-    return {
-      ok: true,
-      offers: month.offers,
-      cacheTier: "month",
-      monthMatchDisclaimer: `No exact-day cache for this route; showing cheaper month-level options (${depMonth}${retMonth ? ` / ${retMonth}` : ""}). Confirm dates on Aviasales.`,
-    };
   }
 
   return {
@@ -264,6 +286,6 @@ export async function fetchTravelpayoutsDataDeals(input: {
     offers: [],
     cacheTier: "none",
     emptyHint:
-      "No Travelpayouts cache for this route (day or month). Add DUFFEL_ACCESS_TOKEN on the server for live flight offers; each row can link to Kiwi.com with your Travelpayouts marker.",
+      "No cached Aviasales deal for these exact dates yet (cache is from recent searches). Add a server Duffel token for live fares and Kiwi.com links with your marker, or try other dates.",
   };
 }

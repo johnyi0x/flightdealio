@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         ? "Cached Travelpayouts rows are usually economy; pick cabin on the partner site."
         : undefined;
 
-    const dealDisclaimer = [result.monthMatchDisclaimer, cabinNote].filter(Boolean).join(" ") || undefined;
+    const dealDisclaimer = cabinNote || undefined;
 
     return NextResponse.json({
       ok: true,
