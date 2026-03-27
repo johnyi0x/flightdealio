@@ -8,8 +8,40 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Avoids misleading "network error" when the server returns HTML (404) or invalid JSON. */
+async function readApiJson(res: Response): Promise<{
+  status: number;
+  json: Record<string, unknown> | null;
+  raw: string;
+}> {
+  const raw = await res.text();
+  try {
+    return { status: res.status, json: JSON.parse(raw) as Record<string, unknown>, raw };
+  } catch {
+    return { status: res.status, json: null, raw };
+  }
+}
+
+function apiErrorMessage(
+  label: string,
+  status: number,
+  json: Record<string, unknown> | null,
+  raw: string,
+): string {
+  const msg = typeof json?.error === "string" ? json.error : null;
+  if (msg) return msg;
+  if (status === 404) {
+    return `${label}: not found (404). Deploy the latest code to Vercel — API routes may be missing.`;
+  }
+  if (status === 429) {
+    return `${label}: too many requests. Wait a minute and try again.`;
+  }
+  const hint = raw.replace(/\s+/g, " ").trim().slice(0, 160);
+  return `${label} failed (${status}).${hint ? ` ${hint}` : ""}`;
+}
+
 /**
- * Travelpayouts search: start → poll (client loop, avoids Vercel 10s timeout) → compile offers.
+ * Travelpayouts: start → batched poll (fewer Vercel invocations) → compile.
  */
 export function FlightSearchForm() {
   const router = useRouter();
@@ -50,43 +82,40 @@ export function FlightSearchForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchPayload),
       });
-      const startJson = (await startRes.json()) as {
-        ok?: boolean;
-        searchId?: string;
-        error?: string;
-      };
-      if (!startRes.ok || !startJson.ok || !startJson.searchId) {
-        setError(startJson.error || "Could not start flight search.");
+      const startRead = await readApiJson(startRes);
+      const startJson = startRead.json;
+      if (!startRes.ok || !startJson?.ok || typeof startJson.searchId !== "string") {
+        setError(apiErrorMessage("Flight search start", startRead.status, startJson, startRead.raw));
         return;
       }
 
       const searchId = startJson.searchId;
       const accumulated: unknown[] = [];
       let terminal = false;
-      const maxPolls = 90;
+      /** Outer loops × inner rounds (batch-poll) ≈ TP coverage; keep Vercel invocations low. */
+      const maxOuter = 22;
 
-      await sleep(800);
+      await sleep(600);
 
-      for (let i = 0; i < maxPolls && !terminal; i++) {
+      for (let i = 0; i < maxOuter && !terminal; i++) {
         const pollRes = await fetch(
-          `/api/flight-search/poll?uuid=${encodeURIComponent(searchId)}`,
+          `/api/flight-search/batch-poll?uuid=${encodeURIComponent(searchId)}`,
           { cache: "no-store" },
         );
-        const pollJson = (await pollRes.json()) as {
-          ok?: boolean;
-          items?: unknown[];
-          terminal?: boolean;
-          error?: string;
-        };
-        if (!pollRes.ok || !pollJson.ok) {
-          setError(pollJson.error || "Lost connection while loading results.");
+        const pollRead = await readApiJson(pollRes);
+        const pollJson = pollRead.json;
+        if (!pollRes.ok || !pollJson?.ok) {
+          setError(apiErrorMessage("Loading results", pollRead.status, pollJson, pollRead.raw));
           return;
         }
-        for (const row of pollJson.items ?? []) {
-          accumulated.push(row);
+        const items = pollJson.items;
+        if (Array.isArray(items)) {
+          for (const row of items) {
+            accumulated.push(row);
+          }
         }
         terminal = Boolean(pollJson.terminal);
-        if (!terminal) await sleep(1000);
+        if (!terminal) await sleep(1100);
       }
 
       const compileRes = await fetch("/api/flight-search/compile", {
@@ -99,23 +128,20 @@ export function FlightSearchForm() {
           cabinClass,
         }),
       });
-      const json = (await compileRes.json()) as {
-        ok?: boolean;
-        error?: string;
-        offers?: unknown;
-        emptyHint?: string;
-      };
-      if (!compileRes.ok || !json.ok) {
-        setError(json.error || "Could not build search results.");
+      const compileRead = await readApiJson(compileRes);
+      const compileJson = compileRead.json;
+      if (!compileRes.ok || !compileJson?.ok) {
+        setError(apiErrorMessage("Building results", compileRead.status, compileJson, compileRead.raw));
         return;
       }
 
       sessionStorage.setItem(
         "flight_search_payload",
         JSON.stringify({
-          offers: json.offers ?? [],
+          offers: compileJson.offers ?? [],
           source: "travelpayouts" as const,
-          emptyHint: json.emptyHint,
+          emptyHint:
+            typeof compileJson.emptyHint === "string" ? compileJson.emptyHint : undefined,
           meta: {
             origin,
             destination,
@@ -125,8 +151,9 @@ export function FlightSearchForm() {
         }),
       );
       router.push("/flight-results");
-    } catch {
-      setError("Network error. Check your connection and try again.");
+    } catch (err) {
+      console.error("[FlightSearchForm]", err);
+      setError("Could not reach the server. Check your connection or try again.");
     } finally {
       setBusy(false);
     }
