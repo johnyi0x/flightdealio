@@ -2,10 +2,10 @@ import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
 import { travelpayoutsFlightSearchSignature } from "@/lib/travelpayoutsSignature";
 
-const FLIGHT_SEARCH = "https://api.travelpayouts.com/v1/flight_search";
-const FLIGHT_SEARCH_RESULTS = "https://api.travelpayouts.com/v1/flight_search_results";
+export const FLIGHT_SEARCH = "https://api.travelpayouts.com/v1/flight_search";
+export const FLIGHT_SEARCH_RESULTS = "https://api.travelpayouts.com/v1/flight_search_results";
 
-type Cabin = "economy" | "premium_economy" | "business" | "first";
+export type TravelpayoutsCabin = "economy" | "premium_economy" | "business" | "first";
 
 type TpTerm = {
   price?: number;
@@ -45,11 +45,7 @@ type TpChunk = {
   meta?: unknown;
 };
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function cabinToTripClass(cabin: Cabin): "Y" | "C" {
+function cabinToTripClass(cabin: TravelpayoutsCabin): "Y" | "C" {
   if (cabin === "business" || cabin === "first") return "C";
   return "Y";
 }
@@ -119,44 +115,29 @@ function bestResultsChunk(accumulated: unknown[]): TpChunk | null {
   return best;
 }
 
-async function pollFlightSearchResults(searchId: string, timeoutMs: number): Promise<unknown[]> {
-  const accumulated: unknown[] = [];
-  const start = Date.now();
-
-  while (Date.now() - start < timeoutMs) {
-    await delay(1000);
-    const res = await fetch(
-      `${FLIGHT_SEARCH_RESULTS}?uuid=${encodeURIComponent(searchId)}`,
-      { headers: { Accept: "application/json" } },
-    );
-    if (!res.ok) continue;
-    const batch: unknown = await res.json();
-    if (!Array.isArray(batch) || batch.length === 0) continue;
-    for (const row of batch) accumulated.push(row);
-    const last = batch[batch.length - 1];
-    if (
-      last &&
-      typeof last === "object" &&
-      "search_id" in last &&
-      !(last as TpChunk).meta
-    ) {
-      return accumulated;
-    }
-  }
-  return accumulated;
-}
-
 function gateLabel(gatesInfo: Record<string, { label?: string }> | undefined, gateId: string): string {
   const raw = gatesInfo?.[gateId]?.label?.trim();
   if (raw) return raw;
   return `Partner ${gateId}`;
 }
 
+function buildSegmentsForProposal(
+  proposal: TpProposal,
+  airports: Record<string, { name?: string; city?: string }>,
+  airlines: Record<string, { name?: string }>,
+): FlightSlicePublic[] {
+  const slices: FlightSlicePublic[] = [];
+  for (const seg of proposal.segment ?? []) {
+    const sl = mapSlice(seg, airports, airlines);
+    if (sl) slices.push(sl);
+  }
+  return slices;
+}
+
 /**
- * Travelpayouts real-time search: one row per itinerary × selling partner (gate),
- * each with its own click/booking URL so price and redirect stay aligned.
+ * Step 1: Start search (fast). Call from server; client polls separately to stay under Vercel time limits.
  */
-export async function searchFlightsWithTravelpayouts(input: {
+export async function startTravelpayoutsFlightSearch(input: {
   apiToken: string;
   marker: string;
   host: string;
@@ -165,31 +146,15 @@ export async function searchFlightsWithTravelpayouts(input: {
   destination: string;
   departureDate: string;
   returnDate: string | null;
-  directOnly: boolean;
-  cabinClass: Cabin;
-  limit: number;
-}): Promise<FlightOfferPublic[]> {
+  cabinClass: TravelpayoutsCabin;
+}): Promise<{ ok: true; searchId: string } | { ok: false; error: string; status?: number }> {
   const segments =
     input.returnDate && input.returnDate.length > 0
       ? [
-          {
-            origin: input.origin,
-            destination: input.destination,
-            date: input.departureDate,
-          },
-          {
-            origin: input.destination,
-            destination: input.origin,
-            date: input.returnDate,
-          },
+          { origin: input.origin, destination: input.destination, date: input.departureDate },
+          { origin: input.destination, destination: input.origin, date: input.returnDate },
         ]
-      : [
-          {
-            origin: input.origin,
-            destination: input.destination,
-            date: input.departureDate,
-          },
-        ];
+      : [{ origin: input.origin, destination: input.destination, date: input.departureDate }];
 
   const bodyObj: Record<string, unknown> = {
     marker: input.marker,
@@ -206,30 +171,98 @@ export async function searchFlightsWithTravelpayouts(input: {
   const signature = travelpayoutsFlightSearchSignature(input.apiToken, bodyObj);
   const postBody = { ...bodyObj, signature };
 
-  console.log("[Travelpayouts] POST flight_search", {
-    origin: input.origin,
-    destination: input.destination,
-    departureDate: input.departureDate,
-    returnDate: input.returnDate,
-  });
-
-  const initRes = await fetch(FLIGHT_SEARCH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(postBody),
-  });
-
-  const initJson = (await initRes.json()) as { search_id?: string };
-  if (!initRes.ok || !initJson.search_id) {
-    console.warn("[Travelpayouts] flight_search failed", initRes.status, initJson);
-    return [];
+  let initRes: Response;
+  try {
+    initRes = await fetch(FLIGHT_SEARCH, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "x-access-token": input.apiToken,
+      },
+      body: JSON.stringify(postBody),
+    });
+  } catch (e) {
+    console.error("[Travelpayouts] flight_search network error", e);
+    return { ok: false, error: "Could not reach flight search. Check your connection.", status: 502 };
   }
 
-  const searchId = initJson.search_id;
-  const accumulated = await pollFlightSearchResults(searchId, 50_000);
-  const chunk = bestResultsChunk(accumulated);
+  let initJson: { search_id?: string; error?: string };
+  try {
+    initJson = (await initRes.json()) as { search_id?: string; error?: string };
+  } catch {
+    const t = await initRes.text().catch(() => "");
+    console.warn("[Travelpayouts] flight_search non-JSON", initRes.status, t.slice(0, 200));
+    return { ok: false, error: "Flight search returned an invalid response.", status: 502 };
+  }
+
+  if (!initRes.ok || !initJson.search_id) {
+    console.warn("[Travelpayouts] flight_search failed", initRes.status, initJson);
+    const msg =
+      initJson.error ||
+      (initRes.status === 401 || initRes.status === 403
+        ? "Travelpayouts rejected the API token. Confirm TRAVELPAYOUTS_API_TOKEN and Search API access."
+        : "Flight search could not start. Try again or contact support.");
+    return { ok: false, error: msg, status: initRes.status >= 400 ? initRes.status : 502 };
+  }
+
+  return { ok: true, searchId: initJson.search_id };
+}
+
+/**
+ * Step 2: One poll (fast). Client calls until `terminal` is true.
+ */
+export async function pollTravelpayoutsResultsBatch(
+  searchId: string,
+): Promise<{ ok: true; items: unknown[]; terminal: boolean } | { ok: false; error: string }> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `${FLIGHT_SEARCH_RESULTS}?uuid=${encodeURIComponent(searchId)}`,
+      { headers: { Accept: "application/json" }, cache: "no-store" },
+    );
+  } catch (e) {
+    console.error("[Travelpayouts] poll network", e);
+    return { ok: false, error: "Network error while loading results." };
+  }
+
+  let batch: unknown;
+  try {
+    batch = await res.json();
+  } catch {
+    return { ok: false, error: "Invalid results response." };
+  }
+
+  if (!res.ok) {
+    return { ok: false, error: "Results request failed." };
+  }
+
+  if (!Array.isArray(batch) || batch.length === 0) {
+    return { ok: true, items: [], terminal: false };
+  }
+
+  const last = batch[batch.length - 1];
+  const terminal =
+    last &&
+    typeof last === "object" &&
+    "search_id" in last &&
+    !(last as TpChunk).meta;
+
+  return { ok: true, items: batch, terminal: Boolean(terminal) };
+}
+
+/**
+ * Step 3: Turn all polled chunks into bookable rows (server-side FX + mapping).
+ */
+export async function compileTravelpayoutsOffers(input: {
+  searchId: string;
+  accumulated: unknown[];
+  directOnly: boolean;
+  cabinClass: TravelpayoutsCabin;
+  limit: number;
+}): Promise<FlightOfferPublic[]> {
+  const chunk = bestResultsChunk(input.accumulated);
   if (!chunk?.proposals?.length) {
-    console.log("[Travelpayouts] no proposals after poll", { searchId, chunks: accumulated.length });
     return [];
   }
 
@@ -243,11 +276,7 @@ export async function searchFlightsWithTravelpayouts(input: {
     const terms = proposal.terms;
     if (!terms || typeof terms !== "object") continue;
 
-    const slices: FlightSlicePublic[] = [];
-    for (const seg of proposal.segment ?? []) {
-      const sl = mapSlice(seg, airports, airlines);
-      if (sl) slices.push(sl);
-    }
+    const slices = buildSegmentsForProposal(proposal, airports, airlines);
     if (slices.length === 0) continue;
 
     for (const [gateId, t] of Object.entries(terms)) {
@@ -262,7 +291,7 @@ export async function searchFlightsWithTravelpayouts(input: {
       const id =
         proposal.sign && gateId
           ? `${proposal.sign}-${gateId}-${termsUrl}`
-          : `${searchId}-${out.length}-${termsUrl}`;
+          : `${input.searchId}-${out.length}-${termsUrl}`;
 
       out.push({
         id,
@@ -270,7 +299,7 @@ export async function searchFlightsWithTravelpayouts(input: {
         totalCurrency: "USD",
         slices,
         agencyName,
-        travelpayoutsClick: { searchId, termsUrl },
+        travelpayoutsClick: { searchId: input.searchId, termsUrl },
       });
     }
   }

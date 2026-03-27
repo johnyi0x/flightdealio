@@ -1,6 +1,6 @@
 # Flight Finder
 
-- **Flights**: Travelpayouts real-time search only — each row is a specific partner price; **Book on {partner}** uses the click API (aligned with that price).
+- **Flights**: Travelpayouts real-time search — `start` → browser **polls** results (fits Vercel time limits) → `compile` builds rows. **Book on {partner}** uses the click API.
 - **Airports**: Travelpayouts `data/en/airports.json` (same token).
 - **Budget explorer**: Paused (was Duffel); use Flights.
 - Env: host dashboard — `TRAVELPAYOUTS_API_TOKEN`, `NEXT_PUBLIC_TRAVELPAYOUTS_MARKER`.

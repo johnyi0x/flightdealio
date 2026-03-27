@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 /**
- * Main flight search: from / to with autocomplete, dates, optional nonstop filter.
- * Results are stored in sessionStorage then shown on `/flight-results`.
+ * Travelpayouts search: start → poll (client loop, avoids Vercel 10s timeout) → compile offers.
  */
 export function FlightSearchForm() {
   const router = useRouter();
@@ -27,47 +30,103 @@ export function FlightSearchForm() {
     const cabinClass = String(fd.get("cabinClass") || "economy");
 
     if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
-      setError("Choose both origin and destination from the suggestion list (needs a 3-letter IATA code).");
+      setError("Choose both airports from the suggestions (3-letter codes).");
       return;
     }
 
+    const searchPayload = {
+      origin,
+      destination,
+      departureDate,
+      returnDate: trip === "round" ? returnDate : null,
+      directOnly,
+      cabinClass,
+    };
+
     setBusy(true);
     try {
-      const res = await fetch("/api/flight-search", {
+      const startRes = await fetch("/api/flight-search/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searchPayload),
+      });
+      const startJson = (await startRes.json()) as {
+        ok?: boolean;
+        searchId?: string;
+        error?: string;
+      };
+      if (!startRes.ok || !startJson.ok || !startJson.searchId) {
+        setError(startJson.error || "Could not start flight search.");
+        return;
+      }
+
+      const searchId = startJson.searchId;
+      const accumulated: unknown[] = [];
+      let terminal = false;
+      const maxPolls = 90;
+
+      await sleep(800);
+
+      for (let i = 0; i < maxPolls && !terminal; i++) {
+        const pollRes = await fetch(
+          `/api/flight-search/poll?uuid=${encodeURIComponent(searchId)}`,
+          { cache: "no-store" },
+        );
+        const pollJson = (await pollRes.json()) as {
+          ok?: boolean;
+          items?: unknown[];
+          terminal?: boolean;
+          error?: string;
+        };
+        if (!pollRes.ok || !pollJson.ok) {
+          setError(pollJson.error || "Lost connection while loading results.");
+          return;
+        }
+        for (const row of pollJson.items ?? []) {
+          accumulated.push(row);
+        }
+        terminal = Boolean(pollJson.terminal);
+        if (!terminal) await sleep(1000);
+      }
+
+      const compileRes = await fetch("/api/flight-search/compile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          origin,
-          destination,
-          departureDate,
-          returnDate: trip === "round" ? returnDate : null,
+          searchId,
+          accumulated,
           directOnly,
           cabinClass,
         }),
       });
-      const json = (await res.json()) as {
+      const json = (await compileRes.json()) as {
         ok?: boolean;
         error?: string;
         offers?: unknown;
-        source?: string;
         emptyHint?: string;
       };
-      if (!json.ok) {
-        setError(json.error || "Search failed.");
+      if (!compileRes.ok || !json.ok) {
+        setError(json.error || "Could not build search results.");
         return;
       }
+
       sessionStorage.setItem(
         "flight_search_payload",
         JSON.stringify({
           offers: json.offers ?? [],
           source: "travelpayouts" as const,
           emptyHint: json.emptyHint,
-          meta: { origin, destination, departureDate, returnDate: trip === "round" ? returnDate : null },
+          meta: {
+            origin,
+            destination,
+            departureDate,
+            returnDate: trip === "round" ? returnDate : null,
+          },
         }),
       );
       router.push("/flight-results");
     } catch {
-      setError("Network error calling the server.");
+      setError("Network error. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -160,7 +219,7 @@ export function FlightSearchForm() {
         disabled={busy}
         className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
       >
-        {busy ? "Searching…" : "Search flights"}
+        {busy ? "Searching partners…" : "Search flights"}
       </button>
     </form>
   );
