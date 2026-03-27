@@ -286,6 +286,6 @@ export async function fetchTravelpayoutsDataDeals(input: {
     offers: [],
     cacheTier: "none",
     emptyHint:
-      "No cached Aviasales deal for these exact dates yet (cache is from recent searches). Add a server Duffel token for live fares and Kiwi.com links with your marker, or try other dates.",
+      "No cached Aviasales deal for these exact dates yet. Add KIWI_TEQUILA_API_KEY on the server for live Kiwi itineraries with exact deep links, or try other dates.",
   };
 }

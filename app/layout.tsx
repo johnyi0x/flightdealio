@@ -6,8 +6,8 @@ import "./globals.css";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 export const metadata: Metadata = {
-  title: "Flight Finder",
-  description: "Search flights and explore trips by budget.",
+  title: "FlightDealio",
+  description: "Find flight deals and book with partner links.",
 };
 
 export default function RootLayout({
@@ -38,7 +38,7 @@ export default function RootLayout({
               href="/"
               className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100"
             >
-              Flight Finder
+              FlightDealio
             </Link>
             <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold sm:text-sm">
               <Link

@@ -1,4 +1,4 @@
-# Flight Finder
+# FlightDealio
 
 - **Flights**: Travelpayouts — `POST .../start` → `GET .../batch-poll` (several TP reads per Vercel invocation) → `POST .../compile`. **Book on {partner}** = click API.
 - **Redeploy Vercel**: push to `main` (connected repo), or **Deployments → ⋮ → Redeploy** on the latest deployment.

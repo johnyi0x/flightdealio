@@ -85,18 +85,20 @@ export function FlightSearchForm() {
         return;
       }
 
+      const src = dealJson.source;
+      const source: "travelpayouts_data" | "kiwi_tequila" =
+        src === "kiwi_tequila" ? "kiwi_tequila" : "travelpayouts_data";
+
       sessionStorage.setItem(
         "flight_search_payload",
         JSON.stringify({
           offers: dealJson.offers ?? [],
-          source: (dealJson.source === "duffel_kiwi" ? "duffel_kiwi" : "travelpayouts_data") as
-            | "travelpayouts_data"
-            | "duffel_kiwi",
+          source,
           emptyHint: typeof dealJson.emptyHint === "string" ? dealJson.emptyHint : undefined,
           dealDisclaimer:
             typeof dealJson.dealDisclaimer === "string" ? dealJson.dealDisclaimer : undefined,
-          duffelDisclaimer:
-            typeof dealJson.duffelDisclaimer === "string" ? dealJson.duffelDisclaimer : undefined,
+          kiwiDisclaimer:
+            typeof dealJson.kiwiDisclaimer === "string" ? dealJson.kiwiDisclaimer : undefined,
           meta: {
             origin,
             destination,

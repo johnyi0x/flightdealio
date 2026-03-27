@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIpFromRequest } from "@/lib/clientIp";
-import { fetchDuffelDealsWithKiwiReferral } from "@/lib/duffelDealSearch";
+import { fetchKiwiTequilaDeals } from "@/lib/kiwiTequilaSearch";
 import { parseFlightSearchBody } from "@/lib/parseFlightSearchBody";
 import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 import { fetchTravelpayoutsDataDeals } from "@/lib/travelpayoutsDealSearch";
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const dealBase =
       process.env.TRAVELPAYOUTS_DEAL_BASE_URL?.trim() || DEFAULT_DEAL_BASE;
     const market = process.env.TRAVELPAYOUTS_DATA_MARKET?.trim();
-    const duffelToken = process.env.DUFFEL_ACCESS_TOKEN?.trim();
+    const kiwiTequilaKey = process.env.KIWI_TEQUILA_API_KEY?.trim();
 
     if (!tpToken || !marker) {
       return NextResponse.json(
@@ -68,26 +68,25 @@ export async function POST(req: NextRequest) {
     }
 
     let offers = result.offers;
-    let source: "travelpayouts_data" | "duffel_kiwi" = "travelpayouts_data";
-    let duffelDisclaimer: string | undefined;
+    let source: "travelpayouts_data" | "kiwi_tequila" = "travelpayouts_data";
+    let kiwiDisclaimer: string | undefined;
 
-    if (offers.length === 0 && duffelToken) {
-      const duffelOffers = await fetchDuffelDealsWithKiwiReferral({
-        token: duffelToken,
-        marker,
+    if (offers.length === 0 && kiwiTequilaKey) {
+      const kiwiOffers = await fetchKiwiTequilaDeals({
+        apiKey: kiwiTequilaKey,
+        affilid: marker,
         origin: parsed.value.origin,
         destination: parsed.value.destination,
         departureDate: parsed.value.departureDate,
         returnDate: parsed.value.returnDate,
         directOnly: parsed.value.directOnly,
-        cabinClass: parsed.value.cabinClass,
-        limit: Math.min(limit, 20),
+        limit: Math.min(limit, 30),
       });
-      if (duffelOffers.length > 0) {
-        offers = duffelOffers;
-        source = "duffel_kiwi";
-        duffelDisclaimer =
-          "Live fares from Duffel (NDC). “Book on Kiwi.com” opens Kiwi with your Travelpayouts affilid for this route and dates — partner price and availability may differ.";
+      if (kiwiOffers.length > 0) {
+        offers = kiwiOffers;
+        source = "kiwi_tequila";
+        kiwiDisclaimer =
+          "Each row opens Kiwi.com on that exact itinerary (deep link from Kiwi’s API), with your Travelpayouts marker on the link and click tracking. Price can change before checkout.";
       }
     }
 
@@ -98,13 +97,19 @@ export async function POST(req: NextRequest) {
 
     const dealDisclaimer = cabinNote || undefined;
 
+    const emptyHint =
+      offers.length === 0
+        ? result.emptyHint ||
+          "Add KIWI_TEQUILA_API_KEY on the server (free Tequila key from Kiwi) for live Kiwi itineraries with exact booking deep links and your Travelpayouts marker."
+        : undefined;
+
     return NextResponse.json({
       ok: true,
       offers,
-      emptyHint: offers.length === 0 ? result.emptyHint : undefined,
+      emptyHint,
       source,
       dealDisclaimer: dealDisclaimer || undefined,
-      duffelDisclaimer,
+      kiwiDisclaimer,
     });
   } catch (e) {
     console.error("[api/deal-search]", e);

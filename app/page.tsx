@@ -8,10 +8,11 @@ export default function HomePage() {
           Find flight deals
         </h1>
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
-          <strong>Aviasales</strong> rows use Travelpayouts data cache for your <strong>exact dates</strong>; each Book
-          link is the API deal URL with your marker. If the cache is empty, configure a server{" "}
-          <strong>Duffel</strong> token for live offers and <strong>Kiwi.com</strong> deep links (same Travelpayouts
-          marker as <code className="rounded bg-slate-100 px-1 py-0.5 text-xs dark:bg-slate-800">affilid</code>). Use{" "}
+          We use <strong>Travelpayouts</strong> cached Aviasales deals when available (exact deal link + your marker).
+          If there is no cache for your dates, add <strong>KIWI_TEQUILA_API_KEY</strong> on the server — we then search{" "}
+          <strong>Kiwi’s Tequila API</strong> and each row gets that itinerary&apos;s real{" "}
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs dark:bg-slate-800">deep_link</code> (not a generic
+          search page), plus Travelpayouts click tracking and your marker as <code className="rounded bg-slate-100 px-1 py-0.5 text-xs dark:bg-slate-800">affilid</code>. Use{" "}
           <strong>direct only</strong> for nonstop.
         </p>
       </div>

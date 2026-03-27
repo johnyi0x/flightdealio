@@ -64,9 +64,11 @@ function BookPartner({ offer }: { offer: FlightOfferPublic }) {
 
 type Stored = {
   offers: FlightOfferPublic[];
-  source?: "travelpayouts" | "travelpayouts_data" | "duffel_kiwi";
+  source?: "travelpayouts" | "travelpayouts_data" | "kiwi_tequila";
   emptyHint?: string;
   dealDisclaimer?: string;
+  kiwiDisclaimer?: string;
+  /** @deprecated old session payloads */
   duffelDisclaimer?: string;
   meta?: {
     origin: string;
@@ -145,17 +147,17 @@ export function FlightResultsView() {
           {data.dealDisclaimer}
         </p>
       )}
-      {data.duffelDisclaimer && (
+      {(data.kiwiDisclaimer || data.duffelDisclaimer) && (
         <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-950 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-100">
-          {data.duffelDisclaimer}
+          {data.kiwiDisclaimer || data.duffelDisclaimer}
         </p>
       )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        {data.source === "duffel_kiwi"
-          ? "Rows show live Duffel quotes for your dates. Book opens Kiwi.com with your Travelpayouts marker (affilid) for the same route and dates."
+        {data.source === "kiwi_tequila"
+          ? "Rows come from Kiwi’s Tequila API: each Book link is that itinerary’s deep link (not a generic search), wrapped with Travelpayouts click tracking and your affilid."
           : data.source === "travelpayouts_data"
-            ? "Prices come from Aviasales/Jetradar cached data (~48h). Each Book link includes your marker and opens that cached deal on Aviasales when available."
-            : "Each price is from a specific booking partner. Book opens that partner’s page (affiliate attribution)."}
+            ? "Prices come from Aviasales/Jetradar cached data. Each Book link is that deal on Aviasales with your marker."
+            : "Each Book link uses your affiliate parameters where configured."}
       </p>
       <div className="space-y-4">
         {data.offers.map((offer) => (
