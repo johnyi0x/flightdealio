@@ -4,10 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 /** Avoids misleading "network error" when the server returns HTML (404) or invalid JSON. */
 async function readApiJson(res: Response): Promise<{
   status: number;
@@ -41,7 +37,7 @@ function apiErrorMessage(
 }
 
 /**
- * Travelpayouts: start → batched poll (fewer Vercel invocations) → compile.
+ * Travelpayouts data API: cached deals per route/dates + referral link per row (no Flight Search API).
  */
 export function FlightSearchForm() {
   const router = useRouter();
@@ -77,71 +73,26 @@ export function FlightSearchForm() {
 
     setBusy(true);
     try {
-      const startRes = await fetch("/api/flight-search/start", {
+      const dealRes = await fetch("/api/deal-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(searchPayload),
       });
-      const startRead = await readApiJson(startRes);
-      const startJson = startRead.json;
-      if (!startRes.ok || !startJson?.ok || typeof startJson.searchId !== "string") {
-        setError(apiErrorMessage("Flight search start", startRead.status, startJson, startRead.raw));
-        return;
-      }
-
-      const searchId = startJson.searchId;
-      const accumulated: unknown[] = [];
-      let terminal = false;
-      /** Outer loops × inner rounds (batch-poll) ≈ TP coverage; keep Vercel invocations low. */
-      const maxOuter = 22;
-
-      await sleep(600);
-
-      for (let i = 0; i < maxOuter && !terminal; i++) {
-        const pollRes = await fetch(
-          `/api/flight-search/batch-poll?uuid=${encodeURIComponent(searchId)}`,
-          { cache: "no-store" },
-        );
-        const pollRead = await readApiJson(pollRes);
-        const pollJson = pollRead.json;
-        if (!pollRes.ok || !pollJson?.ok) {
-          setError(apiErrorMessage("Loading results", pollRead.status, pollJson, pollRead.raw));
-          return;
-        }
-        const items = pollJson.items;
-        if (Array.isArray(items)) {
-          for (const row of items) {
-            accumulated.push(row);
-          }
-        }
-        terminal = Boolean(pollJson.terminal);
-        if (!terminal) await sleep(1100);
-      }
-
-      const compileRes = await fetch("/api/flight-search/compile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          searchId,
-          accumulated,
-          directOnly,
-          cabinClass,
-        }),
-      });
-      const compileRead = await readApiJson(compileRes);
-      const compileJson = compileRead.json;
-      if (!compileRes.ok || !compileJson?.ok) {
-        setError(apiErrorMessage("Building results", compileRead.status, compileJson, compileRead.raw));
+      const dealRead = await readApiJson(dealRes);
+      const dealJson = dealRead.json;
+      if (!dealRes.ok || !dealJson?.ok) {
+        setError(apiErrorMessage("Flight deals", dealRead.status, dealJson, dealRead.raw));
         return;
       }
 
       sessionStorage.setItem(
         "flight_search_payload",
         JSON.stringify({
-          offers: compileJson.offers ?? [],
-          source: "travelpayouts" as const,
-          emptyHint:
-            typeof compileJson.emptyHint === "string" ? compileJson.emptyHint : undefined,
+          offers: dealJson.offers ?? [],
+          source: "travelpayouts_data" as const,
+          emptyHint: typeof dealJson.emptyHint === "string" ? dealJson.emptyHint : undefined,
+          dealDisclaimer:
+            typeof dealJson.dealDisclaimer === "string" ? dealJson.dealDisclaimer : undefined,
           meta: {
             origin,
             destination,
@@ -246,7 +197,7 @@ export function FlightSearchForm() {
         disabled={busy}
         className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
       >
-        {busy ? "Searching partners…" : "Search flights"}
+        {busy ? "Loading deals…" : "Find deals"}
       </button>
     </form>
   );

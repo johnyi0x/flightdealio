@@ -7,7 +7,25 @@ import type { FlightOfferPublic } from "@/lib/flightTypes";
 function BookPartner({ offer }: { offer: FlightOfferPublic }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const ref = offer.referralUrl?.trim();
   const tp = offer.travelpayoutsClick;
+
+  if (ref) {
+    return (
+      <a
+        href={ref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex max-w-[220px] items-center justify-center rounded-xl bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+      >
+        Book on {offer.agencyName}
+      </a>
+    );
+  }
+
+  if (!tp) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -46,8 +64,9 @@ function BookPartner({ offer }: { offer: FlightOfferPublic }) {
 
 type Stored = {
   offers: FlightOfferPublic[];
-  source?: "travelpayouts";
+  source?: "travelpayouts" | "travelpayouts_data";
   emptyHint?: string;
+  dealDisclaimer?: string;
   meta?: {
     origin: string;
     destination: string;
@@ -120,9 +139,15 @@ export function FlightResultsView() {
           {data.meta.returnDate ? ` · Back ${data.meta.returnDate}` : " · One way"}
         </p>
       )}
+      {data.dealDisclaimer && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+          {data.dealDisclaimer}
+        </p>
+      )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        Each price is from a specific booking partner. &quot;Book&quot; opens that partner&apos;s page for this
-        result (affiliate attribution). Same trip may appear at different prices from different partners.
+        {data.source === "travelpayouts_data"
+          ? "Prices come from Aviasales/Jetradar cached data (~48h). Each “Book” link includes your partner marker and opens that specific deal on Aviasales."
+          : "Each price is from a specific booking partner. “Book” opens that partner’s page for this result (affiliate attribution). Same trip may appear at different prices from different partners."}
       </p>
       <div className="space-y-4">
         {data.offers.map((offer) => (

@@ -29,8 +29,11 @@ export type FlightOfferPublic = {
   /** Travelpayouts partner (OTA) selling this fare — shown on the book button. */
   agencyName: string;
   /**
-   * Resolve the partner booking URL on click via `/api/travelpayouts-click`
-   * (matches the listed price for this row).
+   * Data-API deals: open this URL (already includes your `marker`) — one link per cached fare.
    */
-  travelpayoutsClick: { searchId: string; termsUrl: number };
+  referralUrl?: string;
+  /**
+   * Real-time Flight Search API: resolve booking URL via `/api/travelpayouts-click`.
+   */
+  travelpayoutsClick?: { searchId: string; termsUrl: number };
 };
