@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIpForTravelpayouts, getClientIpFromRequest } from "@/lib/clientIp";
 import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
-import { searchFlightsWithDuffel } from "@/lib/duffelFlightSearch";
 import { searchFlightsWithTravelpayouts } from "@/lib/travelpayoutsFlightSearch";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,7 @@ function resolveRequestHost(req: NextRequest): string {
 }
 
 /**
- * Standard flight search: origin, destination, dates → ranked offers.
- * Travelpayouts when token + marker + client IP exist; otherwise Duffel + Kiwi deep link.
+ * Travelpayouts-only: listed fares match partner booking URLs (click API per row).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -29,9 +27,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const duffelToken = process.env.DUFFEL_ACCESS_TOKEN;
     const tpToken = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
     const marker = (process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || "").trim();
+
+    if (!tpToken || !marker) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Flight search is not configured. Add TRAVELPAYOUTS_API_TOKEN and NEXT_PUBLIC_TRAVELPAYOUTS_MARKER in your host settings.",
+        },
+        { status: 503 },
+      );
+    }
+
+    const userIp = getClientIpForTravelpayouts(req);
+    if (!userIp) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Could not detect your network location for this search. Try another network or contact support.",
+        },
+        { status: 400 },
+      );
+    }
 
     const body = (await req.json()) as Record<string, unknown>;
     const parsed = parseFlightBody(body);
@@ -39,51 +58,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
     }
 
-    const common = {
+    const capEnv = Number(process.env.FLIGHT_RESULTS_CAP);
+    const limit = Number.isFinite(capEnv) && capEnv > 0 ? Math.min(capEnv, 120) : 80;
+    const offers = await searchFlightsWithTravelpayouts({
+      apiToken: tpToken,
+      marker,
+      host: resolveRequestHost(req),
+      userIp,
       origin: parsed.value.origin,
       destination: parsed.value.destination,
       departureDate: parsed.value.departureDate,
       returnDate: parsed.value.returnDate,
       directOnly: parsed.value.directOnly,
       cabinClass: parsed.value.cabinClass,
-      limit: 20,
-    };
-
-    const canTravelpayouts = Boolean(tpToken && marker);
-    const userIp = canTravelpayouts ? getClientIpForTravelpayouts(req) : "";
-    if (canTravelpayouts && userIp) {
-      try {
-        const tpOffers = await searchFlightsWithTravelpayouts({
-          apiToken: tpToken!,
-          marker,
-          host: resolveRequestHost(req),
-          userIp,
-          ...common,
-        });
-        if (tpOffers.length > 0) {
-          return NextResponse.json({ ok: true, offers: tpOffers, source: "travelpayouts" });
-        }
-      } catch (e) {
-        console.error("[api/flight-search] Travelpayouts failed, will try Duffel if configured", e);
-      }
-    } else if (canTravelpayouts && !userIp) {
-      console.warn("[api/flight-search] skipping Travelpayouts: no client IP in request headers");
-    }
-
-    if (!duffelToken) {
-      return NextResponse.json(
-        { ok: false, error: "Search is temporarily unavailable. Please try again later." },
-        { status: 503 },
-      );
-    }
-
-    const offers = await searchFlightsWithDuffel({
-      token: duffelToken,
-      affiliateMarker: marker,
-      ...common,
+      limit,
     });
 
-    return NextResponse.json({ ok: true, offers, source: "duffel" });
+    if (offers.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        offers: [],
+        source: "travelpayouts",
+        emptyHint:
+          "No partner fares returned for this search. Try other dates, nearby airports, or allow connections.",
+      });
+    }
+
+    return NextResponse.json({ ok: true, offers, source: "travelpayouts" });
   } catch (e) {
     console.error("[api/flight-search]", e);
     return NextResponse.json(

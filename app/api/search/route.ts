@@ -1,61 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIpFromRequest } from "@/lib/clientIp";
 import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
-import { runBudgetSearch } from "@/lib/budgetSearch";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Budget explorer search (sampled destinations). Secrets stay server-side.
+ * Budget explorer was Duffel-based; removed in favor of Travelpayouts-only flight search.
  */
 export async function GET(req: NextRequest) {
-  try {
-    const ip = getClientIpFromRequest(req);
-    const cap = rateLimitMax("RATE_LIMIT_BUDGET_SEARCH_PER_MIN", 20);
-    if (!allowRateLimit("budget-search", ip, cap)) {
-      return NextResponse.json(
-        { ok: false, error: "Too many searches. Please wait a minute and try again." },
-        { status: 429 },
-      );
-    }
-
-    const { searchParams } = new URL(req.url);
-    const parsed = parseSearchParams(searchParams);
-    if (!parsed.ok) {
-      return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
-    }
-
-    const token = process.env.DUFFEL_ACCESS_TOKEN;
-    const marker = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_MARKER || "";
-
-    if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "Search is temporarily unavailable. Please try again later." },
-        { status: 503 },
-      );
-    }
-
-    const result = await runBudgetSearch({
-      origin: parsed.value.origin,
-      budgetUsd: parsed.value.budgetUsd,
-      nights: parsed.value.nights,
-      yearMonth: parsed.value.yearMonth,
-      duffelAccessToken: token,
-      affiliateMarker: marker,
-    });
-
-    if (!result.ok) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 422 });
-    }
-
-    return NextResponse.json({ ok: true, results: result.results, warnings: result.warnings });
-  } catch (e) {
-    console.error("[api/search] failed", e);
+  const ip = getClientIpFromRequest(req);
+  const cap = rateLimitMax("RATE_LIMIT_BUDGET_SEARCH_PER_MIN", 20);
+  if (!allowRateLimit("budget-search", ip, cap)) {
     return NextResponse.json(
-      { ok: false, error: "Something went wrong. Please try again in a moment." },
-      { status: 500 },
+      { ok: false, error: "Too many searches. Please wait a minute and try again." },
+      { status: 429 },
     );
   }
+
+  const { searchParams } = new URL(req.url);
+  const parsed = parseSearchParams(searchParams);
+  if (!parsed.ok) {
+    return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
+  }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        "Budget explorer is paused while we keep a single Travelpayouts flight pipeline. Use Flights to search routes with partner-accurate prices and book links.",
+    },
+    { status: 422 },
+  );
 }
 
 function parseSearchParams(searchParams: URLSearchParams):

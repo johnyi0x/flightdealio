@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIpFromRequest } from "@/lib/clientIp";
 import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
-import { fetchDuffelPlaceSuggestions } from "@/lib/duffelPlaces";
+import { suggestTravelpayoutsAirports } from "@/lib/travelpayoutsAirports";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Autocomplete airports/cities for the flight search form (Duffel Places API).
+ * Airport autocomplete via Travelpayouts static airport list (no Duffel).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, places: [] }, { status: 429 });
     }
 
-    const token = process.env.DUFFEL_ACCESS_TOKEN?.trim();
+    const token = process.env.TRAVELPAYOUTS_API_TOKEN?.trim();
     if (!token) {
-      console.error("[api/places] missing flight data token");
+      console.error("[api/places] missing TRAVELPAYOUTS_API_TOKEN");
       return NextResponse.json({ ok: false, places: [] }, { status: 503 });
     }
 
@@ -27,15 +27,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, places: [] });
     }
 
-    const places = await fetchDuffelPlaceSuggestions({ token, query: q });
-    const slim = places.slice(0, 12).map((p) => ({
+    const places = await suggestTravelpayoutsAirports({ token, query: q, limit: 15 });
+    const slim = places.map((p) => ({
       type: p.type,
-      name: p.name,
       iata_code: p.iata_code,
       iata_city_code: p.iata_city_code,
-      city_name: p.city_name,
-      country: p.iata_country_code,
-      label: formatPlaceLabel(p),
+      label: p.label,
     }));
 
     return NextResponse.json({ ok: true, places: slim });
@@ -43,20 +40,4 @@ export async function GET(req: NextRequest) {
     console.error("[api/places]", e);
     return NextResponse.json({ ok: false, places: [] }, { status: 500 });
   }
-}
-
-function formatPlaceLabel(p: {
-  type?: string;
-  name?: string;
-  iata_code?: string;
-  city_name?: string;
-  iata_country_code?: string;
-}): string {
-  const code = p.iata_code || "";
-  const city = p.city_name || "";
-  const country = p.iata_country_code || "";
-  if (p.type === "city") {
-    return `${p.name || city || code} (${code}) — city`;
-  }
-  return `${p.name || code} (${code})${city ? ` · ${city}` : ""}${country ? `, ${country}` : ""}`;
 }

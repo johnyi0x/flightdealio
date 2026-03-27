@@ -2,65 +2,52 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { FlightOfferPublic } from "@/lib/duffelFlightSearch";
+import type { FlightOfferPublic } from "@/lib/flightTypes";
 
-function BookOrKiwi({ offer }: { offer: FlightOfferPublic }) {
+function BookPartner({ offer }: { offer: FlightOfferPublic }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const tp = offer.travelpayoutsClick;
 
-  if (tp) {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={async () => {
-            setErr(null);
-            setLoading(true);
-            try {
-              const res = await fetch("/api/travelpayouts-click", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ searchId: tp.searchId, termsUrl: tp.termsUrl }),
-              });
-              const json = (await res.json()) as { ok?: boolean; url?: string; error?: string };
-              if (!json.ok || !json.url) {
-                setErr(json.error || "Could not open booking link.");
-                return;
-              }
-              window.open(json.url, "_blank", "noopener,noreferrer");
-            } catch {
-              setErr("Network error.");
-            } finally {
-              setLoading(false);
-            }
-          }}
-          className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60"
-        >
-          {loading ? "Opening…" : "Book this fare"}
-        </button>
-        {err && <p className="max-w-[220px] text-right text-xs text-rose-600 dark:text-rose-400">{err}</p>}
-      </div>
-    );
-  }
-
   return (
-    <a
-      href={offer.affiliateUrl}
-      target="_blank"
-      rel="noopener noreferrer sponsored"
-      className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
-    >
-      Search on Kiwi.com
-    </a>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        disabled={loading}
+        onClick={async () => {
+          setErr(null);
+          setLoading(true);
+          try {
+            const res = await fetch("/api/travelpayouts-click", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ searchId: tp.searchId, termsUrl: tp.termsUrl }),
+            });
+            const json = (await res.json()) as { ok?: boolean; url?: string; error?: string };
+            if (!json.ok || !json.url) {
+              setErr(json.error || "Could not open booking link.");
+              return;
+            }
+            window.open(json.url, "_blank", "noopener,noreferrer");
+          } catch {
+            setErr("Network error.");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        className="inline-flex max-w-[220px] items-center justify-center rounded-xl bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60"
+      >
+        {loading ? "Opening…" : `Book on ${offer.agencyName}`}
+      </button>
+      {err && <p className="max-w-[220px] text-right text-xs text-rose-600 dark:text-rose-400">{err}</p>}
+    </div>
   );
 }
 
 type Stored = {
   offers: FlightOfferPublic[];
-  /** `travelpayouts` = book links match the listed fare; `duffel` = Kiwi is a fresh search. */
-  source?: "duffel" | "travelpayouts";
+  source?: "travelpayouts";
+  emptyHint?: string;
   meta?: {
     origin: string;
     destination: string;
@@ -69,10 +56,6 @@ type Stored = {
   };
 };
 
-/**
- * Reads Duffel results from sessionStorage (set by `FlightSearchForm`) and
- * renders ranked offers with segment-level airline + aircraft rows.
- */
 export function FlightResultsView() {
   const [data, setData] = useState<Stored | null | undefined>(undefined);
 
@@ -97,7 +80,7 @@ export function FlightResultsView() {
     );
   }
 
-  if (!data || !data.offers?.length) {
+  if (!data) {
     return (
       <div className="space-y-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
@@ -105,6 +88,25 @@ export function FlightResultsView() {
         </div>
         <Link href="/" className="text-sm font-semibold text-sky-700 underline dark:text-sky-400">
           Back to flight search
+        </Link>
+      </div>
+    );
+  }
+
+  if (!data.offers?.length) {
+    return (
+      <div className="space-y-4">
+        {data.meta && (
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {data.meta.origin} → {data.meta.destination} · Out {data.meta.departureDate}
+            {data.meta.returnDate ? ` · Back ${data.meta.returnDate}` : " · One way"}
+          </p>
+        )}
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+          {data.emptyHint || "No fares returned for this search."}
+        </div>
+        <Link href="/" className="text-sm font-semibold text-sky-700 underline dark:text-sky-400">
+          New search
         </Link>
       </div>
     );
@@ -118,16 +120,10 @@ export function FlightResultsView() {
           {data.meta.returnDate ? ` · Back ${data.meta.returnDate}` : " · One way"}
         </p>
       )}
-      {data.source === "travelpayouts" && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Book opens the partner site for the option you pick (Travelpayouts).
-        </p>
-      )}
-      {data.source === "duffel" && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Fares are from our flight data partner. Kiwi links pre-fill this trip; final price is on Kiwi.
-        </p>
-      )}
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Each price is from a specific booking partner. &quot;Book&quot; opens that partner&apos;s page for this
+        result (affiliate attribution). Same trip may appear at different prices from different partners.
+      </p>
       <div className="space-y-4">
         {data.offers.map((offer) => (
           <article
@@ -138,15 +134,11 @@ export function FlightResultsView() {
               <div>
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100">
                   ${offer.totalUsd.toFixed(0)}{" "}
-                  <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD total</span>
+                  <span className="text-sm font-normal text-slate-500 dark:text-slate-400">USD</span>
                 </p>
-                {offer.emissionsKg && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Est. emissions {offer.emissionsKg} kg CO₂e
-                  </p>
-                )}
+                <p className="text-xs text-slate-500 dark:text-slate-400">{offer.agencyName}</p>
               </div>
-              <BookOrKiwi offer={offer} />
+              <BookPartner offer={offer} />
             </div>
 
             <div className="space-y-3">
@@ -154,7 +146,7 @@ export function FlightResultsView() {
                 <div key={si} className="rounded-xl border border-slate-100 p-3 dark:border-slate-800">
                   {slice.duration && (
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      Slice {si + 1} · {slice.duration}
+                      Leg {si + 1} · {slice.duration}
                     </p>
                   )}
                   <ul className="space-y-2 text-sm">

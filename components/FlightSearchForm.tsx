@@ -50,6 +50,7 @@ export function FlightSearchForm() {
         error?: string;
         offers?: unknown;
         source?: string;
+        emptyHint?: string;
       };
       if (!json.ok) {
         setError(json.error || "Search failed.");
@@ -58,8 +59,9 @@ export function FlightSearchForm() {
       sessionStorage.setItem(
         "flight_search_payload",
         JSON.stringify({
-          offers: json.offers,
-          source: json.source === "travelpayouts" ? "travelpayouts" : "duffel",
+          offers: json.offers ?? [],
+          source: "travelpayouts" as const,
+          emptyHint: json.emptyHint,
           meta: { origin, destination, departureDate, returnDate: trip === "round" ? returnDate : null },
         }),
       );

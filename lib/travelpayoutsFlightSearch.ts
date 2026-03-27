@@ -1,5 +1,5 @@
 import { convertToUsd } from "@/lib/fx";
-import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/duffelFlightSearch";
+import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
 import { travelpayoutsFlightSearchSignature } from "@/lib/travelpayoutsSignature";
 
 const FLIGHT_SEARCH = "https://api.travelpayouts.com/v1/flight_search";
@@ -40,6 +40,7 @@ type TpChunk = {
   proposals?: TpProposal[];
   airports?: Record<string, { name?: string; city?: string }>;
   airlines?: Record<string, { name?: string }>;
+  gates_info?: Record<string, { label?: string }>;
   search_id?: string;
   meta?: unknown;
 };
@@ -51,23 +52,6 @@ function delay(ms: number): Promise<void> {
 function cabinToTripClass(cabin: Cabin): "Y" | "C" {
   if (cabin === "business" || cabin === "first") return "C";
   return "Y";
-}
-
-function pickCheapestTerm(
-  terms: Record<string, TpTerm> | undefined,
-): { gate: string; price: number; currency: string; termsUrl: number } | null {
-  if (!terms || typeof terms !== "object") return null;
-  let best: { gate: string; price: number; currency: string; termsUrl: number } | null = null;
-  for (const [gate, t] of Object.entries(terms)) {
-    const price = typeof t.unified_price === "number" ? t.unified_price : Number(t.price);
-    const url = t.url;
-    if (!Number.isFinite(price) || typeof url !== "number") continue;
-    const currency = (t.currency || "usd").toString();
-    if (!best || price < best.price) {
-      best = { gate, price, currency, termsUrl: url };
-    }
-  }
-  return best;
 }
 
 function passesDirectFilter(directOnly: boolean, proposal: TpProposal): boolean {
@@ -162,9 +146,15 @@ async function pollFlightSearchResults(searchId: string, timeoutMs: number): Pro
   return accumulated;
 }
 
+function gateLabel(gatesInfo: Record<string, { label?: string }> | undefined, gateId: string): string {
+  const raw = gatesInfo?.[gateId]?.label?.trim();
+  if (raw) return raw;
+  return `Partner ${gateId}`;
+}
+
 /**
- * Real-time Travelpayouts (Aviasales) search: signed init + polled results.
- * Booking URLs are not returned here — resolve via `/api/travelpayouts-click` on user click.
+ * Travelpayouts real-time search: one row per itinerary × selling partner (gate),
+ * each with its own click/booking URL so price and redirect stay aligned.
  */
 export async function searchFlightsWithTravelpayouts(input: {
   apiToken: string;
@@ -245,15 +235,13 @@ export async function searchFlightsWithTravelpayouts(input: {
 
   const airports = chunk.airports ?? {};
   const airlines = chunk.airlines ?? {};
+  const gatesInfo = chunk.gates_info ?? {};
   const out: FlightOfferPublic[] = [];
 
   for (const proposal of chunk.proposals) {
     if (!passesDirectFilter(input.directOnly, proposal)) continue;
-    const term = pickCheapestTerm(proposal.terms);
-    if (!term) continue;
-
-    const totalUsd = await convertToUsd(term.price, term.currency);
-    if (totalUsd === null) continue;
+    const terms = proposal.terms;
+    if (!terms || typeof terms !== "object") continue;
 
     const slices: FlightSlicePublic[] = [];
     for (const seg of proposal.segment ?? []) {
@@ -262,19 +250,29 @@ export async function searchFlightsWithTravelpayouts(input: {
     }
     if (slices.length === 0) continue;
 
-    const id =
-      proposal.sign && term.gate
-        ? `${proposal.sign}-${term.gate}-${term.termsUrl}`
-        : `${searchId}-${out.length}-${term.termsUrl}`;
+    for (const [gateId, t] of Object.entries(terms)) {
+      const price = typeof t.unified_price === "number" ? t.unified_price : Number(t.price);
+      const termsUrl = t.url;
+      if (!Number.isFinite(price) || typeof termsUrl !== "number") continue;
 
-    out.push({
-      id,
-      totalUsd: Math.round(totalUsd * 100) / 100,
-      totalCurrency: "USD",
-      slices,
-      affiliateUrl: "",
-      travelpayoutsClick: { searchId, termsUrl: term.termsUrl },
-    });
+      const totalUsd = await convertToUsd(price, (t.currency || "usd").toString());
+      if (totalUsd === null) continue;
+
+      const agencyName = gateLabel(gatesInfo, gateId);
+      const id =
+        proposal.sign && gateId
+          ? `${proposal.sign}-${gateId}-${termsUrl}`
+          : `${searchId}-${out.length}-${termsUrl}`;
+
+      out.push({
+        id,
+        totalUsd: Math.round(totalUsd * 100) / 100,
+        totalCurrency: "USD",
+        slices,
+        agencyName,
+        travelpayoutsClick: { searchId, termsUrl },
+      });
+    }
   }
 
   out.sort((a, b) => a.totalUsd - b.totalUsd);
