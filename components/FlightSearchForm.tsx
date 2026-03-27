@@ -99,6 +99,16 @@ export function FlightSearchForm() {
             typeof dealJson.dealDisclaimer === "string" ? dealJson.dealDisclaimer : undefined,
           kiwiDisclaimer:
             typeof dealJson.kiwiDisclaimer === "string" ? dealJson.kiwiDisclaimer : undefined,
+          affiliateFallback:
+            dealJson.affiliateFallback &&
+            typeof dealJson.affiliateFallback === "object" &&
+            dealJson.affiliateFallback !== null
+              ? (dealJson.affiliateFallback as {
+                  url: string;
+                  title: string;
+                  body: string;
+                })
+              : undefined,
           meta: {
             origin,
             destination,

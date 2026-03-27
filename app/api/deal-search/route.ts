@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { travelpayoutsAffiliateKiwiSearchForRoute } from "@/lib/affiliate";
 import { getClientIpFromRequest } from "@/lib/clientIp";
 import { fetchKiwiTequilaDeals } from "@/lib/kiwiTequilaSearch";
 import { parseFlightSearchBody } from "@/lib/parseFlightSearchBody";
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
         offers = kiwiOffers;
         source = "kiwi_tequila";
         kiwiDisclaimer =
-          "Each row opens Kiwi.com on that exact itinerary (deep link from Kiwi’s API), with your Travelpayouts marker on the link and click tracking. Price can change before checkout.";
+          "Each row opens Kiwi.com on that exact itinerary (Tequila deep_link), with your marker and Travelpayouts click tracking. Price can change before checkout.";
       }
     }
 
@@ -95,13 +96,25 @@ export async function POST(req: NextRequest) {
         ? "Cached Travelpayouts rows are usually economy; pick cabin on the partner site."
         : undefined;
 
-    const dealDisclaimer = cabinNote || undefined;
+    const dealDisclaimer =
+      [result.flexDisclaimer, cabinNote].filter(Boolean).join(" ") || undefined;
 
-    const emptyHint =
+    const affiliateFallback =
       offers.length === 0
-        ? result.emptyHint ||
-          "Add KIWI_TEQUILA_API_KEY on the server (free Tequila key from Kiwi) for live Kiwi itineraries with exact booking deep links and your Travelpayouts marker."
+        ? {
+            url: travelpayoutsAffiliateKiwiSearchForRoute({
+              marker,
+              from: parsed.value.origin,
+              to: parsed.value.destination,
+              departure: parsed.value.departureDate,
+              returnDate: parsed.value.returnDate,
+            }),
+            title: "Search this trip on Kiwi.com (affiliate)",
+            body: "Travelpayouts had no cached fares for this route/dates (even ±7 days). This button uses your Travelpayouts partner link — no Kiwi API key. It opens Kiwi’s search for your route and dates; prices are live on their site.",
+          }
         : undefined;
+
+    const emptyHint = offers.length === 0 ? result.emptyHint : undefined;
 
     return NextResponse.json({
       ok: true,
@@ -110,6 +123,7 @@ export async function POST(req: NextRequest) {
       source,
       dealDisclaimer: dealDisclaimer || undefined,
       kiwiDisclaimer,
+      affiliateFallback,
     });
   } catch (e) {
     console.error("[api/deal-search]", e);

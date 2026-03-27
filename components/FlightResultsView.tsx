@@ -70,6 +70,7 @@ type Stored = {
   kiwiDisclaimer?: string;
   /** @deprecated old session payloads */
   duffelDisclaimer?: string;
+  affiliateFallback?: { url: string; title: string; body: string };
   meta?: {
     origin: string;
     destination: string;
@@ -127,6 +128,24 @@ export function FlightResultsView() {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
           {data.emptyHint || "No fares returned for this search."}
         </div>
+        {data.affiliateFallback?.url && (
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-5 dark:border-sky-900/40 dark:bg-sky-950/30">
+            <p className="mb-2 text-sm font-semibold text-sky-950 dark:text-sky-100">
+              {data.affiliateFallback.title}
+            </p>
+            <p className="mb-4 text-xs text-sky-900/90 dark:text-sky-200/90">
+              {data.affiliateFallback.body}
+            </p>
+            <a
+              href={data.affiliateFallback.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+            >
+              Open Kiwi.com
+            </a>
+          </div>
+        )}
         <Link href="/" className="text-sm font-semibold text-sky-700 underline dark:text-sky-400">
           New search
         </Link>
@@ -154,9 +173,9 @@ export function FlightResultsView() {
       )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
         {data.source === "kiwi_tequila"
-          ? "Rows come from Kiwi’s Tequila API: each Book link is that itinerary’s deep link (not a generic search), wrapped with Travelpayouts click tracking and your affilid."
+          ? "Rows come from Kiwi’s Tequila API when your server has a key: each Book link is that itinerary’s deep_link with Travelpayouts tracking."
           : data.source === "travelpayouts_data"
-            ? "Prices come from Aviasales/Jetradar cached data. Each Book link is that deal on Aviasales with your marker."
+            ? "Rows use Travelpayouts data: each Book link is that cached fare on Aviasales (exact dates, or ±7 days when we say so above) with your marker."
             : "Each Book link uses your affiliate parameters where configured."}
       </p>
       <div className="space-y-4">

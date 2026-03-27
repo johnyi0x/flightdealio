@@ -1,3 +1,4 @@
+import { addDaysIso } from "@/lib/dates";
 import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
 
@@ -34,7 +35,7 @@ type TpPriceRow = {
   link?: string;
 };
 
-export type TravelpayoutsDealsTier = "exact" | "none";
+export type TravelpayoutsDealsTier = "exact" | "flex" | "none";
 
 /**
  * Aviasales v3 returns integer `price` in minor units for USD/EUR/… (e.g. 10592 → 105.92 USD).
@@ -240,9 +241,25 @@ async function fetchTravelpayoutsPricesOnce(input: {
   return { ok: true, offers };
 }
 
+const FLEX_DAY_RADIUS = 7;
+
+function mergeOffersDedupe(offers: FlightOfferPublic[], cap: number): FlightOfferPublic[] {
+  const seen = new Set<string>();
+  const out: FlightOfferPublic[] = [];
+  for (const o of offers.sort((a, b) => a.totalUsd - b.totalUsd)) {
+    const k = o.referralUrl || o.id;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(o);
+    if (out.length >= cap) break;
+  }
+  return out;
+}
+
 /**
- * Cached deals for the **exact** dates only (same as the user’s search).
- * No month-wide fallback — that showed wrong dates vs the search and looked broken.
+ * 1) Exact dates from Travelpayouts cache (real Aviasales `link` + marker).
+ * 2) If empty, same for departure ±7 days (return shifts by the same offset on round trips).
+ * No Kiwi Tequila key required — those rows are still real cached deals when the API returns them.
  */
 export async function fetchTravelpayoutsDataDeals(input: {
   apiToken: string;
@@ -261,24 +278,60 @@ export async function fetchTravelpayoutsDataDeals(input: {
       offers: FlightOfferPublic[];
       emptyHint?: string;
       cacheTier: TravelpayoutsDealsTier;
+      flexDisclaimer?: string;
     }
   | { ok: false; error: string; status?: number }
 > {
-  const exact = await fetchTravelpayoutsPricesOnce({
+  const baseArgs = {
     apiToken: input.apiToken,
     marker: input.marker,
     dealBaseUrl: input.dealBaseUrl,
     market: input.market,
     origin: input.origin,
     destination: input.destination,
-    departureAt: input.departureDate,
-    returnAt: input.returnDate,
     directOnly: input.directOnly,
     limit: input.limit,
+  };
+
+  const exact = await fetchTravelpayoutsPricesOnce({
+    ...baseArgs,
+    departureAt: input.departureDate,
+    returnAt: input.returnDate,
   });
   if (!exact.ok) return { ok: false, error: exact.error, status: exact.status };
   if (exact.offers.length > 0) {
-    return { ok: true, offers: exact.offers, cacheTier: "exact" };
+    return { ok: true, offers: mergeOffersDedupe(exact.offers, input.limit), cacheTier: "exact" };
+  }
+
+  const pooled: FlightOfferPublic[] = [];
+  for (let d = 1; d <= FLEX_DAY_RADIUS; d++) {
+    const depP = addDaysIso(input.departureDate, d);
+    const retP = input.returnDate ? addDaysIso(input.returnDate, d) : null;
+    const depN = addDaysIso(input.departureDate, -d);
+    const retN = input.returnDate ? addDaysIso(input.returnDate, -d) : null;
+
+    const tryOnce = async (depAt: string, retAt: string | null) => {
+      const r = await fetchTravelpayoutsPricesOnce({
+        ...baseArgs,
+        departureAt: depAt,
+        returnAt: retAt,
+      });
+      if (r.ok) pooled.push(...r.offers);
+    };
+
+    await tryOnce(depP, retP);
+    await tryOnce(depN, retN);
+  }
+
+  const merged = mergeOffersDedupe(pooled, input.limit);
+  if (merged.length > 0) {
+    return {
+      ok: true,
+      offers: merged,
+      cacheTier: "flex",
+      flexDisclaimer:
+        "No exact-day cache for your dates — these are real Aviasales/Jetradar cached fares within ±7 days (same trip length). Dates on each row match that deal; Book opens that specific offer with your marker.",
+    };
   }
 
   return {
@@ -286,6 +339,6 @@ export async function fetchTravelpayoutsDataDeals(input: {
     offers: [],
     cacheTier: "none",
     emptyHint:
-      "No cached Aviasales deal for these exact dates yet. Add KIWI_TEQUILA_API_KEY on the server for live Kiwi itineraries with exact deep links, or try other dates.",
+      "No Travelpayouts cache for this route within ±7 days of your trip. Use the Kiwi search button below — it uses your Travelpayouts affiliate link (no API key). Optional: KIWI_TEQUILA_API_KEY if Kiwi approves your partner account for exact itinerary deep links.",
   };
 }

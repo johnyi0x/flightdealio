@@ -1,10 +1,8 @@
+import { wrapTravelpayoutsKiwiPartnerUrl } from "@/lib/affiliate";
 import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
 
 const TEQUILA_BASE = "https://tequila-api.kiwi.com/v2/search";
-
-/** Travelpayouts Kiwi custom-link click (promo_id 5000 per Kiwi program docs). */
-const TP_KIWI_CLICK = "https://c111.travelpayouts.com/click";
 
 type TequilaRouteLeg = {
   flyFrom?: string;
@@ -39,10 +37,7 @@ function ymdToDdMmYyyy(ymd: string): string {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-/**
- * Ensures the user's Travelpayouts / Kiwi `affilid` is on the deep link, then wraps in
- * Travelpayouts click tracking (shmarker + promo_id 5000).
- */
+/** Tequila `deep_link` + your affilid + Travelpayouts click wrapper. */
 export function travelpayoutsTrackedKiwiDeepLink(deepLink: string, affilid: string): string {
   let target = deepLink.trim();
   if (!target) return target;
@@ -55,8 +50,7 @@ export function travelpayoutsTrackedKiwiDeepLink(deepLink: string, affilid: stri
     return target;
   }
   if (!affilid) return target;
-  const customUrl = encodeURIComponent(target);
-  return `${TP_KIWI_CLICK}?shmarker=${encodeURIComponent(affilid)}&promo_id=5000&source_type=customlink&type=click&custom_url=${customUrl}`;
+  return wrapTravelpayoutsKiwiPartnerUrl(target, affilid);
 }
 
 function connectedChunks(route: TequilaRouteLeg[]): TequilaRouteLeg[][] {
