@@ -173,12 +173,13 @@ export async function startTravelpayoutsFlightSearch(input: {
 
   let initRes: Response;
   try {
+    // Do not send x-access-token here — flight_search is signed with MD5 only; extra headers can trigger 403.
     initRes = await fetch(FLIGHT_SEARCH, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "x-access-token": input.apiToken,
+        "User-Agent": "FlightFinder/1.0 (+https://travelpayouts.com)",
       },
       body: JSON.stringify(postBody),
     });
@@ -187,13 +188,34 @@ export async function startTravelpayoutsFlightSearch(input: {
     return { ok: false, error: "Could not reach flight search. Check your connection.", status: 502 };
   }
 
-  let initJson: { search_id?: string; error?: string };
+  const rawText = await initRes.text();
+  let initJson: { search_id?: string; error?: string } | null = null;
   try {
-    initJson = (await initRes.json()) as { search_id?: string; error?: string };
+    initJson = JSON.parse(rawText) as { search_id?: string; error?: string };
   } catch {
-    const t = await initRes.text().catch(() => "");
-    console.warn("[Travelpayouts] flight_search non-JSON", initRes.status, t.slice(0, 200));
-    return { ok: false, error: "Flight search returned an invalid response.", status: 502 };
+    initJson = null;
+  }
+
+  if (!initJson) {
+    console.warn("[Travelpayouts] flight_search non-JSON", initRes.status, rawText.slice(0, 300));
+    if (initRes.status === 403 || initRes.status === 401) {
+      return {
+        ok: false,
+        error:
+          "Travelpayouts blocked flight search (HTTP " +
+          initRes.status +
+          "). The real-time Flight Search API is separate from the data token: request access in your Travelpayouts dashboard / support, and ensure TRAVELPAYOUTS_API_TOKEN and NEXT_PUBLIC_TRAVELPAYOUTS_MARKER match the API page. Your site host must match the domain you verified with Travelpayouts.",
+        status: initRes.status,
+      };
+    }
+    return {
+      ok: false,
+      error:
+        "Travelpayouts returned a non-JSON response (" +
+        initRes.status +
+        "). Check Vercel function logs; often this is access denied or a proxy page.",
+      status: 502,
+    };
   }
 
   if (!initRes.ok || !initJson.search_id) {
@@ -201,7 +223,9 @@ export async function startTravelpayoutsFlightSearch(input: {
     const msg =
       initJson.error ||
       (initRes.status === 401 || initRes.status === 403
-        ? "Travelpayouts rejected the API token. Confirm TRAVELPAYOUTS_API_TOKEN and Search API access."
+        ? "Travelpayouts denied access (HTTP " +
+          initRes.status +
+          "). Confirm Flight Search API is enabled for your account, token and marker are from the same Travelpayouts API page, and the `host` header matches your verified website."
         : "Flight search could not start. Try again or contact support.");
     return { ok: false, error: msg, status: initRes.status >= 400 ? initRes.status : 502 };
   }
