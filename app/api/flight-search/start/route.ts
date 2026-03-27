@@ -9,8 +9,25 @@ export const maxDuration = 30;
 
 function resolveRequestHost(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-host");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return req.headers.get("host") || "localhost";
+  let h =
+    forwarded?.split(",")[0]?.trim() || req.headers.get("host")?.trim() || "localhost";
+  // Travelpayouts matches host to the verified site; strip default ports.
+  h = h.replace(/:443$/i, "").replace(/:80$/i, "");
+  return h;
+}
+
+/** Host sent in flight_search body — must match Travelpayouts “Website” (www vs apex matters). */
+function travelpayoutsVerifiedHost(req: NextRequest): string {
+  const raw = process.env.TRAVELPAYOUTS_VERIFIED_HOST?.trim();
+  if (raw) {
+    try {
+      const u = raw.includes("://") ? new URL(raw) : new URL(`https://${raw}`);
+      return u.hostname;
+    } catch {
+      return raw.replace(/^https?:\/\//i, "").split("/")[0]!.split(":")[0]!;
+    }
+  }
+  return resolveRequestHost(req);
 }
 
 export async function POST(req: NextRequest) {
@@ -58,7 +75,7 @@ export async function POST(req: NextRequest) {
     const started = await startTravelpayoutsFlightSearch({
       apiToken: tpToken,
       marker,
-      host: resolveRequestHost(req),
+      host: travelpayoutsVerifiedHost(req),
       userIp,
       origin: parsed.value.origin,
       destination: parsed.value.destination,
