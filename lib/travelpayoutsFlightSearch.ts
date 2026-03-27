@@ -197,7 +197,12 @@ export async function startTravelpayoutsFlightSearch(input: {
   }
 
   if (!initJson) {
-    console.warn("[Travelpayouts] flight_search non-JSON", initRes.status, rawText.slice(0, 300));
+    console.warn(
+      "[Travelpayouts] flight_search non-JSON",
+      initRes.status,
+      "host=" + input.host,
+      rawText.slice(0, 300),
+    );
     if (initRes.status === 403 || initRes.status === 401) {
       return {
         ok: false,
@@ -219,7 +224,7 @@ export async function startTravelpayoutsFlightSearch(input: {
   }
 
   if (!initRes.ok || !initJson.search_id) {
-    console.warn("[Travelpayouts] flight_search failed", initRes.status, initJson);
+    console.warn("[Travelpayouts] flight_search failed", initRes.status, "host=" + input.host, initJson);
     const msg =
       initJson.error ||
       (initRes.status === 401 || initRes.status === 403
