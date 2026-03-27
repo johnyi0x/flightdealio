@@ -64,9 +64,10 @@ function BookPartner({ offer }: { offer: FlightOfferPublic }) {
 
 type Stored = {
   offers: FlightOfferPublic[];
-  source?: "travelpayouts" | "travelpayouts_data";
+  source?: "travelpayouts" | "travelpayouts_data" | "duffel_kiwi";
   emptyHint?: string;
   dealDisclaimer?: string;
+  duffelDisclaimer?: string;
   meta?: {
     origin: string;
     destination: string;
@@ -144,10 +145,17 @@ export function FlightResultsView() {
           {data.dealDisclaimer}
         </p>
       )}
+      {data.duffelDisclaimer && (
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-950 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-100">
+          {data.duffelDisclaimer}
+        </p>
+      )}
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        {data.source === "travelpayouts_data"
-          ? "Prices come from Aviasales/Jetradar cached data (~48h). Each “Book” link includes your partner marker and opens that specific deal on Aviasales."
-          : "Each price is from a specific booking partner. “Book” opens that partner’s page for this result (affiliate attribution). Same trip may appear at different prices from different partners."}
+        {data.source === "duffel_kiwi"
+          ? "Rows show live Duffel quotes for your dates. Book opens Kiwi.com with your Travelpayouts marker (affilid) for the same route and dates."
+          : data.source === "travelpayouts_data"
+            ? "Prices come from Aviasales/Jetradar cached data (~48h). Each Book link includes your marker and opens that cached deal on Aviasales when available."
+            : "Each price is from a specific booking partner. Book opens that partner’s page (affiliate attribution)."}
       </p>
       <div className="space-y-4">
         {data.offers.map((offer) => (

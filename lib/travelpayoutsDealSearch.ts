@@ -1,5 +1,6 @@
 import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
+
 const PRICES_FOR_DATES = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates";
 
 type TpPriceRow = {
@@ -17,6 +18,8 @@ type TpPriceRow = {
   return_transfers?: number;
   link?: string;
 };
+
+export type TravelpayoutsDealsTier = "exact" | "month" | "none";
 
 /**
  * Partner landing URL: relative `link` from API + base host + marker (Travelpayouts attribution).
@@ -87,39 +90,36 @@ function buildSlices(row: TpPriceRow): FlightSlicePublic[] {
   return slices;
 }
 
-/**
- * Cached “deals” from the public data API (no 50k MAU Flight Search API).
- * Each row includes a unique `link` → we attach your marker for referral tracking.
- */
-export async function fetchTravelpayoutsDataDeals(input: {
+type OnceResult =
+  | { ok: true; offers: FlightOfferPublic[] }
+  | { ok: false; error: string; status: number };
+
+async function fetchTravelpayoutsPricesOnce(input: {
   apiToken: string;
   marker: string;
   dealBaseUrl: string;
   market?: string;
   origin: string;
   destination: string;
-  departureDate: string;
-  returnDate: string | null;
+  departureAt: string;
+  returnAt: string | null;
   directOnly: boolean;
   limit: number;
-}): Promise<
-  | { ok: true; offers: FlightOfferPublic[]; emptyHint?: string }
-  | { ok: false; error: string; status?: number }
-> {
+}): Promise<OnceResult> {
   const params = new URLSearchParams({
     origin: input.origin,
     destination: input.destination,
-    departure_at: input.departureDate,
+    departure_at: input.departureAt,
     unique: "false",
     sorting: "price",
     direct: input.directOnly ? "true" : "false",
     cy: "usd",
     limit: String(Math.min(Math.max(input.limit, 1), 30)),
     page: "1",
-    one_way: input.returnDate ? "false" : "true",
+    one_way: input.returnAt ? "false" : "true",
     token: input.apiToken,
   });
-  if (input.returnDate) params.set("return_at", input.returnDate);
+  if (input.returnAt) params.set("return_at", input.returnAt);
   if (input.market?.trim()) params.set("market", input.market.trim());
 
   let res: Response;
@@ -194,11 +194,76 @@ export async function fetchTravelpayoutsDataDeals(input: {
   }
 
   offers.sort((a, b) => a.totalUsd - b.totalUsd);
+  return { ok: true, offers };
+}
 
-  const emptyHint =
-    offers.length === 0
-      ? "No cached deals for these exact dates. Data reflects recent Aviasales/Jetradar searches (~48h). Try flexible dates or check back later."
-      : undefined;
+/**
+ * Cached deals: try **exact dates** first, then **YYYY-MM** (often has rows when day-level cache is empty).
+ */
+export async function fetchTravelpayoutsDataDeals(input: {
+  apiToken: string;
+  marker: string;
+  dealBaseUrl: string;
+  market?: string;
+  origin: string;
+  destination: string;
+  departureDate: string;
+  returnDate: string | null;
+  directOnly: boolean;
+  limit: number;
+}): Promise<
+  | {
+      ok: true;
+      offers: FlightOfferPublic[];
+      emptyHint?: string;
+      cacheTier: TravelpayoutsDealsTier;
+      monthMatchDisclaimer?: string;
+    }
+  | { ok: false; error: string; status?: number }
+> {
+  const base = {
+    apiToken: input.apiToken,
+    marker: input.marker,
+    dealBaseUrl: input.dealBaseUrl,
+    market: input.market,
+    origin: input.origin,
+    destination: input.destination,
+    directOnly: input.directOnly,
+    limit: input.limit,
+  };
 
-  return { ok: true, offers, emptyHint };
+  const exact = await fetchTravelpayoutsPricesOnce({
+    ...base,
+    departureAt: input.departureDate,
+    returnAt: input.returnDate,
+  });
+  if (!exact.ok) return { ok: false, error: exact.error, status: exact.status };
+  if (exact.offers.length > 0) {
+    return { ok: true, offers: exact.offers, cacheTier: "exact" };
+  }
+
+  const depMonth = input.departureDate.slice(0, 7);
+  const retMonth = input.returnDate ? input.returnDate.slice(0, 7) : null;
+  const month = await fetchTravelpayoutsPricesOnce({
+    ...base,
+    departureAt: depMonth,
+    returnAt: retMonth,
+  });
+  if (!month.ok) return { ok: false, error: month.error, status: month.status };
+  if (month.offers.length > 0) {
+    return {
+      ok: true,
+      offers: month.offers,
+      cacheTier: "month",
+      monthMatchDisclaimer: `No exact-day cache for this route; showing cheaper month-level options (${depMonth}${retMonth ? ` / ${retMonth}` : ""}). Confirm dates on Aviasales.`,
+    };
+  }
+
+  return {
+    ok: true,
+    offers: [],
+    cacheTier: "none",
+    emptyHint:
+      "No Travelpayouts cache for this route (day or month). Add DUFFEL_ACCESS_TOKEN on the server for live flight offers; each row can link to Kiwi.com with your Travelpayouts marker.",
+  };
 }

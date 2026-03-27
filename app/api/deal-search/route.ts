@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIpFromRequest } from "@/lib/clientIp";
+import { fetchDuffelDealsWithKiwiReferral } from "@/lib/duffelDealSearch";
 import { parseFlightSearchBody } from "@/lib/parseFlightSearchBody";
 import { allowRateLimit, rateLimitMax } from "@/lib/rateLimit";
 import { fetchTravelpayoutsDataDeals } from "@/lib/travelpayoutsDealSearch";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const DEFAULT_DEAL_BASE = "https://www.aviasales.com";
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
     const dealBase =
       process.env.TRAVELPAYOUTS_DEAL_BASE_URL?.trim() || DEFAULT_DEAL_BASE;
     const market = process.env.TRAVELPAYOUTS_DATA_MARKET?.trim();
+    const duffelToken = process.env.DUFFEL_ACCESS_TOKEN?.trim();
 
     if (!tpToken || !marker) {
       return NextResponse.json(
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest) {
     }
 
     const limit = rateLimitMax("FLIGHT_RESULTS_CAP", 80);
+    const tpLimit = Math.min(limit, 30);
+
     const result = await fetchTravelpayoutsDataDeals({
       apiToken: tpToken,
       marker,
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
       departureDate: parsed.value.departureDate,
       returnDate: parsed.value.returnDate,
       directOnly: parsed.value.directOnly,
-      limit: Math.min(limit, 30),
+      limit: tpLimit,
     });
 
     if (!result.ok) {
@@ -63,15 +67,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: result.error }, { status: st });
     }
 
+    let offers = result.offers;
+    let source: "travelpayouts_data" | "duffel_kiwi" = "travelpayouts_data";
+    let duffelDisclaimer: string | undefined;
+
+    if (offers.length === 0 && duffelToken) {
+      const duffelOffers = await fetchDuffelDealsWithKiwiReferral({
+        token: duffelToken,
+        marker,
+        origin: parsed.value.origin,
+        destination: parsed.value.destination,
+        departureDate: parsed.value.departureDate,
+        returnDate: parsed.value.returnDate,
+        directOnly: parsed.value.directOnly,
+        cabinClass: parsed.value.cabinClass,
+        limit: Math.min(limit, 20),
+      });
+      if (duffelOffers.length > 0) {
+        offers = duffelOffers;
+        source = "duffel_kiwi";
+        duffelDisclaimer =
+          "Live fares from Duffel (NDC). “Book on Kiwi.com” opens Kiwi with your Travelpayouts affilid for this route and dates — partner price and availability may differ.";
+      }
+    }
+
+    const cabinNote =
+      parsed.value.cabinClass !== "economy"
+        ? "Cached Travelpayouts rows are usually economy; pick cabin on the partner site."
+        : undefined;
+
+    const dealDisclaimer = [result.monthMatchDisclaimer, cabinNote].filter(Boolean).join(" ") || undefined;
+
     return NextResponse.json({
       ok: true,
-      offers: result.offers,
-      emptyHint: result.emptyHint,
-      source: "travelpayouts_data" as const,
-      dealDisclaimer:
-        parsed.value.cabinClass !== "economy"
-          ? "Cached deals are usually economy-focused; choose cabin on the partner site."
-          : undefined,
+      offers,
+      emptyHint: offers.length === 0 ? result.emptyHint : undefined,
+      source,
+      dealDisclaimer: dealDisclaimer || undefined,
+      duffelDisclaimer,
     });
   } catch (e) {
     console.error("[api/deal-search]", e);

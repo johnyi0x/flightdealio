@@ -89,10 +89,14 @@ export function FlightSearchForm() {
         "flight_search_payload",
         JSON.stringify({
           offers: dealJson.offers ?? [],
-          source: "travelpayouts_data" as const,
+          source: (dealJson.source === "duffel_kiwi" ? "duffel_kiwi" : "travelpayouts_data") as
+            | "travelpayouts_data"
+            | "duffel_kiwi",
           emptyHint: typeof dealJson.emptyHint === "string" ? dealJson.emptyHint : undefined,
           dealDisclaimer:
             typeof dealJson.dealDisclaimer === "string" ? dealJson.dealDisclaimer : undefined,
+          duffelDisclaimer:
+            typeof dealJson.duffelDisclaimer === "string" ? dealJson.duffelDisclaimer : undefined,
           meta: {
             origin,
             destination,
