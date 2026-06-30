@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
+import type { FlightOfferPublic } from "@/lib/flightTypes";
 
 /** Avoids misleading "network error" when the server returns HTML (404) or invalid JSON. */
 async function readApiJson(res: Response): Promise<{
@@ -36,8 +37,72 @@ function apiErrorMessage(
   return `${label} failed (${status}).${hint ? ` ${hint}` : ""}`;
 }
 
+type SearchInput = {
+  origin: string;
+  destination: string;
+  departureDate: string;
+  returnDate: string | null;
+  directOnly: boolean;
+  cabinClass: string;
+};
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
- * Travelpayouts data API: cached deals per route/dates + referral link per row (no Flight Search API).
+ * Primary path: real-time Travelpayouts Flight Search (start → batch-poll → compile).
+ * It returns MULTIPLE sellers per itinerary, so the user can compare prices on our site.
+ * Returns null if access is denied / nothing came back, so the caller can fall back.
+ */
+async function tryLiveSearch(input: SearchInput): Promise<FlightOfferPublic[] | null> {
+  const startRes = await fetch("/api/flight-search/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const start = await readApiJson(startRes);
+  const searchId =
+    start.json && typeof start.json.searchId === "string" ? start.json.searchId : "";
+  if (!startRes.ok || !start.json?.ok || !searchId) return null;
+
+  const accumulated: unknown[] = [];
+  let terminal = false;
+  for (let round = 0; round < 6 && !terminal; round++) {
+    const pollRes = await fetch(
+      `/api/flight-search/batch-poll?uuid=${encodeURIComponent(searchId)}`,
+      { cache: "no-store" },
+    );
+    const poll = await readApiJson(pollRes);
+    if (pollRes.ok && poll.json?.ok && Array.isArray(poll.json.items)) {
+      accumulated.push(...(poll.json.items as unknown[]));
+      terminal = Boolean(poll.json.terminal);
+    }
+    if (!terminal) await delay(600);
+  }
+
+  // compile validates length <= 500; keep the most recent chunks (final ones hold full results).
+  const trimmed = accumulated.slice(-400);
+  const compileRes = await fetch("/api/flight-search/compile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      searchId,
+      accumulated: trimmed,
+      directOnly: input.directOnly,
+      cabinClass: input.cabinClass,
+    }),
+  });
+  const compile = await readApiJson(compileRes);
+  if (!compileRes.ok || !compile.json?.ok) return null;
+  const offers = Array.isArray(compile.json.offers)
+    ? (compile.json.offers as FlightOfferPublic[])
+    : [];
+  return offers.length > 0 ? offers : null;
+}
+
+/**
+ * Search flow:
+ * 1) Live multi-seller search (compare sellers on our site).
+ * 2) Fallback: cached Travelpayouts deals (+ Kiwi deep links / affiliate search) when live has nothing.
  */
 export function FlightSearchForm() {
   const router = useRouter();
@@ -62,7 +127,7 @@ export function FlightSearchForm() {
       return;
     }
 
-    const searchPayload = {
+    const searchPayload: SearchInput = {
       origin,
       destination,
       departureDate,
@@ -71,8 +136,33 @@ export function FlightSearchForm() {
       cabinClass,
     };
 
+    const meta = {
+      origin,
+      destination,
+      departureDate,
+      returnDate: trip === "round" ? returnDate : null,
+    };
+
     setBusy(true);
     try {
+      // 1) Live multi-seller search first.
+      let liveOffers: FlightOfferPublic[] | null = null;
+      try {
+        liveOffers = await tryLiveSearch(searchPayload);
+      } catch (e) {
+        console.warn("[FlightSearchForm] live search failed, falling back", e);
+      }
+
+      if (liveOffers && liveOffers.length > 0) {
+        sessionStorage.setItem(
+          "flight_search_payload",
+          JSON.stringify({ offers: liveOffers, source: "travelpayouts", meta }),
+        );
+        router.push("/flight-results");
+        return;
+      }
+
+      // 2) Fallback: cached deals.
       const dealRes = await fetch("/api/deal-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,7 +171,7 @@ export function FlightSearchForm() {
       const dealRead = await readApiJson(dealRes);
       const dealJson = dealRead.json;
       if (!dealRes.ok || !dealJson?.ok) {
-        setError(apiErrorMessage("Flight deals", dealRead.status, dealJson, dealRead.raw));
+        setError(apiErrorMessage("Flight search", dealRead.status, dealJson, dealRead.raw));
         return;
       }
 
@@ -103,18 +193,9 @@ export function FlightSearchForm() {
             dealJson.affiliateFallback &&
             typeof dealJson.affiliateFallback === "object" &&
             dealJson.affiliateFallback !== null
-              ? (dealJson.affiliateFallback as {
-                  url: string;
-                  title: string;
-                  body: string;
-                })
+              ? (dealJson.affiliateFallback as { url: string; title: string; body: string })
               : undefined,
-          meta: {
-            origin,
-            destination,
-            departureDate,
-            returnDate: trip === "round" ? returnDate : null,
-          },
+          meta,
         }),
       );
       router.push("/flight-results");
@@ -213,7 +294,7 @@ export function FlightSearchForm() {
         disabled={busy}
         className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
       >
-        {busy ? "Loading deals…" : "Find deals"}
+        {busy ? "Searching flights…" : "Search flights"}
       </button>
     </form>
   );

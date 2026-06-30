@@ -1,5 +1,11 @@
+import { airlineName } from "@/lib/airlines";
 import { convertToUsd } from "@/lib/fx";
-import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
+import type {
+  FlightOfferPublic,
+  FlightSegmentPublic,
+  FlightSeller,
+  FlightSlicePublic,
+} from "@/lib/flightTypes";
 import { travelpayoutsFlightSearchSignature } from "@/lib/travelpayoutsSignature";
 
 export const FLIGHT_SEARCH = "https://api.travelpayouts.com/v1/flight_search";
@@ -90,7 +96,7 @@ function mapSlice(
       destName: airports[arr]?.name || airports[arr]?.city || arr,
       departsAt,
       arrivesAt,
-      airlineName: (carrier && airlines[carrier]?.name) || carrier || "Airline",
+      airlineName: airlineName(carrier, airlines[carrier]?.name),
       airlineIata: carrier || undefined,
       flightNumber: f.number != null ? String(f.number) : "",
       aircraftName: f.aircraft,
@@ -308,6 +314,8 @@ export async function compileTravelpayoutsOffers(input: {
     const slices = buildSegmentsForProposal(proposal, airports, airlines);
     if (slices.length === 0) continue;
 
+    // One proposal = one itinerary. Each gate (term) is a different SELLER of it.
+    const sellers: FlightSeller[] = [];
     for (const [gateId, t] of Object.entries(terms)) {
       const price = typeof t.unified_price === "number" ? t.unified_price : Number(t.price);
       const termsUrl = t.url;
@@ -316,23 +324,31 @@ export async function compileTravelpayoutsOffers(input: {
       const totalUsd = await convertToUsd(price, (t.currency || "usd").toString());
       if (totalUsd === null) continue;
 
-      const agencyName = gateLabel(gatesInfo, gateId);
-      const id =
-        proposal.sign && gateId
-          ? `${proposal.sign}-${gateId}-${termsUrl}`
-          : `${input.searchId}-${out.length}-${termsUrl}`;
-
-      out.push({
-        id,
+      sellers.push({
+        name: gateLabel(gatesInfo, gateId),
         totalUsd: Math.round(totalUsd * 100) / 100,
         totalCurrency: "USD",
-        slices,
-        agencyName,
         travelpayoutsClick: { searchId: input.searchId, termsUrl },
       });
     }
+
+    if (sellers.length === 0) continue;
+    sellers.sort((a, b) => a.totalUsd - b.totalUsd);
+
+    const id = proposal.sign
+      ? `prop-${proposal.sign}-${out.length}`
+      : `${input.searchId}-${out.length}`;
+
+    out.push({
+      id,
+      slices,
+      sellers,
+      cheapestUsd: sellers[0]!.totalUsd,
+      totalCurrency: "USD",
+      dateTier: "exact",
+    });
   }
 
-  out.sort((a, b) => a.totalUsd - b.totalUsd);
+  out.sort((a, b) => a.cheapestUsd - b.cheapestUsd);
   return out.slice(0, input.limit);
 }

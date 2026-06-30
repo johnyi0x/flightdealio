@@ -8,10 +8,9 @@ export default function HomePage() {
           Find flight deals
         </h1>
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
-          <strong>Travelpayouts</strong> first: exact dates, then ±7 days for the same trip — each priced row is a real
-          Aviasales deal link with your marker. If nothing is cached, you still get an{" "}
-          <strong>affiliate Kiwi search</strong> button (no API key). Optional{" "}
-          <strong>KIWI_TEQUILA_API_KEY</strong> adds exact Kiwi deep links when Kiwi approves your partner account. Use{" "}
+          Search a route and compare prices from multiple sellers for the same flight, on one page. We try a live
+          multi-seller search first; if nothing comes back for your exact dates, we show the closest cached deals
+          (clearly labelled) so you still have options. You book on the seller&rsquo;s site. Use{" "}
           <strong>direct only</strong> for nonstop.
         </p>
       </div>

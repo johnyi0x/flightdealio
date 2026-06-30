@@ -1,4 +1,5 @@
 import { wrapTravelpayoutsKiwiPartnerUrl } from "@/lib/affiliate";
+import { airlineName } from "@/lib/airlines";
 import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
 
@@ -85,7 +86,7 @@ function chunkToSlice(chunk: TequilaRouteLeg[]): FlightSlicePublic | null {
       destName: leg.cityTo || d,
       departsAt: leg.local_departure || "",
       arrivesAt: leg.local_arrival || "",
-      airlineName: airline || "Airline",
+      airlineName: airlineName(airline),
       airlineIata: airline || undefined,
       flightNumber: fn,
     });
@@ -233,14 +234,21 @@ export async function fetchKiwiTequilaDeals(input: {
         : `kiwi-${out.length}-${(d.booking_token || "").slice(0, 12) || "x"}`;
     out.push({
       id,
-      totalUsd,
-      totalCurrency: "USD",
       slices,
-      agencyName: "Kiwi.com",
-      referralUrl: travelpayoutsTrackedKiwiDeepLink(deep, input.affilid.trim()),
+      sellers: [
+        {
+          name: "Kiwi.com",
+          totalUsd,
+          totalCurrency: "USD",
+          referralUrl: travelpayoutsTrackedKiwiDeepLink(deep, input.affilid.trim()),
+        },
+      ],
+      cheapestUsd: totalUsd,
+      totalCurrency: "USD",
+      dateTier: "exact",
     });
   }
 
-  out.sort((a, b) => a.totalUsd - b.totalUsd);
+  out.sort((a, b) => a.cheapestUsd - b.cheapestUsd);
   return out;
 }

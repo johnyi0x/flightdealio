@@ -1,3 +1,4 @@
+import { airlineName } from "@/lib/airlines";
 import { addDaysIso } from "@/lib/dates";
 import { convertToUsd } from "@/lib/fx";
 import type { FlightOfferPublic, FlightSegmentPublic, FlightSlicePublic } from "@/lib/flightTypes";
@@ -90,8 +91,11 @@ function buildSlices(row: TpPriceRow): FlightSlicePublic[] {
   const airline = (row.airline || "").toUpperCase();
   const fn = row.flight_number != null ? String(row.flight_number) : "";
   const stopsOut = row.transfers ?? 0;
-  const airlineLabel =
-    airline || (stopsOut > 0 ? `${stopsOut} stop(s) outbound` : "Flight");
+  const airlineLabel = airline
+    ? airlineName(airline)
+    : stopsOut > 0
+      ? `${stopsOut} stop(s) outbound`
+      : "Flight";
 
   const depOut = row.departure_at || "";
   const arrOut = arrivesAfterDuration(depOut, row.duration_to);
@@ -112,8 +116,11 @@ function buildSlices(row: TpPriceRow): FlightSlicePublic[] {
 
   if (row.return_at) {
     const stopsBack = row.return_transfers ?? 0;
-    const backLabel =
-      airline || (stopsBack > 0 ? `${stopsBack} stop(s) return` : "Flight");
+    const backLabel = airline
+      ? airlineName(airline)
+      : stopsBack > 0
+        ? `${stopsBack} stop(s) return`
+        : "Flight";
     const depRet = row.return_at;
     const arrRet = arrivesAfterDuration(depRet, row.duration_back);
     const retSeg: FlightSegmentPublic = {
@@ -148,6 +155,7 @@ async function fetchTravelpayoutsPricesOnce(input: {
   returnAt: string | null;
   directOnly: boolean;
   limit: number;
+  dateTier: "exact" | "flex";
 }): Promise<OnceResult> {
   const params = new URLSearchParams({
     origin: input.origin,
@@ -227,17 +235,25 @@ async function fetchTravelpayoutsPricesOnce(input: {
     const id = `deal-${idx}-${referralUrl.slice(-48)}`;
     idx += 1;
 
+    const priceUsd = Math.round(totalUsd * 100) / 100;
     offers.push({
       id,
-      totalUsd: Math.round(totalUsd * 100) / 100,
-      totalCurrency: "USD",
       slices: buildSlices(row),
-      agencyName: "Aviasales",
-      referralUrl,
+      sellers: [
+        {
+          name: "Aviasales",
+          totalUsd: priceUsd,
+          totalCurrency: "USD",
+          referralUrl,
+        },
+      ],
+      cheapestUsd: priceUsd,
+      totalCurrency: "USD",
+      dateTier: input.dateTier,
     });
   }
 
-  offers.sort((a, b) => a.totalUsd - b.totalUsd);
+  offers.sort((a, b) => a.cheapestUsd - b.cheapestUsd);
   return { ok: true, offers };
 }
 
@@ -246,8 +262,8 @@ const FLEX_DAY_RADIUS = 7;
 function mergeOffersDedupe(offers: FlightOfferPublic[], cap: number): FlightOfferPublic[] {
   const seen = new Set<string>();
   const out: FlightOfferPublic[] = [];
-  for (const o of offers.sort((a, b) => a.totalUsd - b.totalUsd)) {
-    const k = o.referralUrl || o.id;
+  for (const o of offers.sort((a, b) => a.cheapestUsd - b.cheapestUsd)) {
+    const k = o.sellers[0]?.referralUrl || o.id;
     if (seen.has(k)) continue;
     seen.add(k);
     out.push(o);
@@ -297,6 +313,7 @@ export async function fetchTravelpayoutsDataDeals(input: {
     ...baseArgs,
     departureAt: input.departureDate,
     returnAt: input.returnDate,
+    dateTier: "exact",
   });
   if (!exact.ok) return { ok: false, error: exact.error, status: exact.status };
   if (exact.offers.length > 0) {
@@ -315,6 +332,7 @@ export async function fetchTravelpayoutsDataDeals(input: {
         ...baseArgs,
         departureAt: depAt,
         returnAt: retAt,
+        dateTier: "flex",
       });
       if (r.ok) pooled.push(...r.offers);
     };
