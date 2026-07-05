@@ -6,8 +6,8 @@ import "./globals.css";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 export const metadata: Metadata = {
-  title: "FlightDealio",
-  description: "Find flight deals and book with partner links.",
+  title: "FlightDealio — Compare flight deals",
+  description: "Search and compare flight prices from partner sellers.",
 };
 
 export default function RootLayout({
@@ -19,7 +19,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen">
         <script
-          // Set initial theme class before React hydrates to avoid flash.
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var stored=localStorage.getItem('theme_choice');var choice=stored||'dark';var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=(choice==='dark')?true:(choice==='light')?false:!!prefersDark;document.documentElement.classList.toggle('dark',isDark);}catch(e){/* ignore */}})();`,
           }}
@@ -32,32 +31,35 @@ export default function RootLayout({
     document.head.appendChild(script);
   })();`}
         </Script>
-        <header className="relative z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
             <Link
               href="/"
-              className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100"
+              className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-900 dark:text-white"
             >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-xs font-black text-white">
+                FD
+              </span>
               FlightDealio
             </Link>
-            <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold sm:text-sm">
+            <nav className="flex items-center gap-1 sm:gap-2">
               <Link
                 href="/"
-                className="rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 sm:px-3 sm:text-sm"
               >
                 Flights
               </Link>
               <Link
                 href="/budget"
-                className="rounded-lg px-2 py-1 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 sm:inline sm:px-3 sm:text-sm"
               >
-                Budget explorer
+                Budget
               </Link>
               <ThemeSwitcher />
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
         <Analytics />
       </body>
     </html>

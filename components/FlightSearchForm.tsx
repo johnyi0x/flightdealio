@@ -5,7 +5,6 @@ import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
 import type { FlightOfferPublic } from "@/lib/flightTypes";
 
-/** Avoids misleading "network error" when the server returns HTML (404) or invalid JSON. */
 async function readApiJson(res: Response): Promise<{
   status: number;
   json: Record<string, unknown> | null;
@@ -28,7 +27,7 @@ function apiErrorMessage(
   const msg = typeof json?.error === "string" ? json.error : null;
   if (msg) return msg;
   if (status === 404) {
-    return `${label}: not found (404). Deploy the latest code to Vercel — API routes may be missing.`;
+    return `${label}: not found (404). Deploy the latest code to Vercel.`;
   }
   if (status === 429) {
     return `${label}: too many requests. Wait a minute and try again.`;
@@ -48,11 +47,6 @@ type SearchInput = {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/**
- * Primary path: real-time Travelpayouts Flight Search (start → batch-poll → compile).
- * It returns MULTIPLE sellers per itinerary, so the user can compare prices on our site.
- * Returns null if access is denied / nothing came back, so the caller can fall back.
- */
 async function tryLiveSearch(input: SearchInput): Promise<FlightOfferPublic[] | null> {
   const startRes = await fetch("/api/flight-search/start", {
     method: "POST",
@@ -79,7 +73,6 @@ async function tryLiveSearch(input: SearchInput): Promise<FlightOfferPublic[] | 
     if (!terminal) await delay(600);
   }
 
-  // compile validates length <= 500; keep the most recent chunks (final ones hold full results).
   const trimmed = accumulated.slice(-400);
   const compileRes = await fetch("/api/flight-search/compile", {
     method: "POST",
@@ -99,11 +92,7 @@ async function tryLiveSearch(input: SearchInput): Promise<FlightOfferPublic[] | 
   return offers.length > 0 ? offers : null;
 }
 
-/**
- * Search flow:
- * 1) Live multi-seller search (compare sellers on our site).
- * 2) Fallback: cached Travelpayouts deals (+ Kiwi deep links / affiliate search) when live has nothing.
- */
+
 export function FlightSearchForm() {
   const router = useRouter();
   const [trip, setTrip] = useState<"round" | "one">("round");
@@ -123,7 +112,7 @@ export function FlightSearchForm() {
     const cabinClass = String(fd.get("cabinClass") || "economy");
 
     if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
-      setError("Choose both airports from the suggestions (3-letter codes).");
+      setError("Pick both airports from the suggestions list.");
       return;
     }
 
@@ -141,16 +130,17 @@ export function FlightSearchForm() {
       destination,
       departureDate,
       returnDate: trip === "round" ? returnDate : null,
+      cabinClass,
+      directOnly,
     };
 
     setBusy(true);
     try {
-      // 1) Live multi-seller search first.
       let liveOffers: FlightOfferPublic[] | null = null;
       try {
         liveOffers = await tryLiveSearch(searchPayload);
-      } catch (e) {
-        console.warn("[FlightSearchForm] live search failed, falling back", e);
+      } catch (err) {
+        console.warn("[FlightSearchForm] live search failed", err);
       }
 
       if (liveOffers && liveOffers.length > 0) {
@@ -162,7 +152,6 @@ export function FlightSearchForm() {
         return;
       }
 
-      // 2) Fallback: cached deals.
       const dealRes = await fetch("/api/deal-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,101 +190,135 @@ export function FlightSearchForm() {
       router.push("/flight-results");
     } catch (err) {
       console.error("[FlightSearchForm]", err);
-      setError("Could not reach the server. Check your connection or try again.");
+      setError("Could not reach the server. Check your connection.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"
-    >
-      <div className="flex flex-wrap gap-4 text-sm">
-        <label className="inline-flex items-center gap-2">
+    <form onSubmit={onSubmit} className="space-y-4">
+      {/* Trip type + options row */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
+          {(["round", "one"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTrip(t)}
+              className={[
+                "rounded-full px-3 py-1.5 text-xs font-semibold transition sm:px-4 sm:text-sm",
+                trip === t
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100",
+              ].join(" ")}
+            >
+              {t === "round" ? "Round-trip" : "One-way"}
+            </button>
+          ))}
+        </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-slate-600 dark:text-slate-400">
           <input
-            type="radio"
-            name="tripTypeUi"
-            checked={trip === "round"}
-            onChange={() => setTrip("round")}
+            type="checkbox"
+            name="directOnly"
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
           />
-          Round trip
-        </label>
-        <label className="inline-flex items-center gap-2">
-          <input
-            type="radio"
-            name="tripTypeUi"
-            checked={trip === "one"}
-            onChange={() => setTrip("one")}
-          />
-          One way
+          <span className="text-xs sm:text-sm">Direct flights only</span>
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <AirportField name="origin" label="From" required />
-        <AirportField name="destination" label="To" required />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-800 dark:text-slate-200">Departure</span>
-          <input
-            name="departureDate"
-            type="date"
-            required
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
-        </label>
-        {trip === "round" ? (
-          <label className="block space-y-1 text-sm">
-            <span className="font-medium text-slate-800 dark:text-slate-200">Return</span>
-            <input
-              name="returnDate"
-              type="date"
+      {/* Unified search bar — desktop horizontal, mobile stacked */}
+      <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
+        {/* Row 1: airports */}
+        <div className="flex flex-col md:flex-row md:items-stretch">
+          <div className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-4 py-3 dark:border-slate-800 md:flex-row md:items-center md:gap-4 md:border-b-0 md:border-r md:py-4">
+            <AirportField
+              name="origin"
+              label="From"
               required
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              variant="compact"
+              placeholder="City or airport"
             />
-          </label>
-        ) : (
-          <div />
-        )}
-      </div>
+            <AirportField
+              name="destination"
+              label="To"
+              required
+              variant="compact"
+              placeholder="City or airport"
+            />
+          </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-800 dark:text-slate-200">Cabin</span>
-          <select
-            name="cabinClass"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            defaultValue="economy"
-          >
-            <option value="economy">Economy</option>
-            <option value="premium_economy">Premium economy</option>
-            <option value="business">Business</option>
-            <option value="first">First</option>
-          </select>
-        </label>
-        <label className="mt-6 flex items-center gap-2 text-sm sm:mt-8">
-          <input type="checkbox" name="directOnly" className="rounded border-slate-300" />
-          <span className="text-slate-800 dark:text-slate-200">Direct flights only</span>
-        </label>
+          {/* Row 2 on mobile / right section on desktop: dates + cabin */}
+          <div className="flex flex-col sm:flex-row md:shrink-0">
+            <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r">
+              <label className="flex flex-1 flex-col border-r border-slate-100 px-4 py-3 dark:border-slate-800 md:py-4">
+                <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Depart
+                </span>
+                <input
+                  name="departureDate"
+                  type="date"
+                  required
+                  className="w-full border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+                />
+              </label>
+              {trip === "round" && (
+                <label className="flex flex-1 flex-col px-4 py-3 md:py-4">
+                  <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Return
+                  </span>
+                  <input
+                    name="returnDate"
+                    type="date"
+                    required
+                    className="w-full border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+                  />
+                </label>
+              )}
+            </div>
+
+            <label className="flex flex-col justify-center border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:w-36 sm:border-b-0 md:py-4">
+              <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Cabin
+              </span>
+              <select
+                name="cabinClass"
+                defaultValue="economy"
+                className="w-full cursor-pointer border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+              >
+                <option value="economy">Economy</option>
+                <option value="premium_economy">Premium economy</option>
+                <option value="business">Business</option>
+                <option value="first">First</option>
+              </select>
+            </label>
+          </div>
+
+          {/* Search button */}
+          <div className="flex items-stretch p-3 md:p-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 md:w-auto md:min-w-[120px] md:self-center md:rounded-xl md:py-4"
+            >
+              {busy ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Searching…
+                </span>
+              ) : (
+                "Search"
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
           {error}
         </p>
       )}
-
-      <button
-        type="submit"
-        disabled={busy}
-        className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60 sm:w-auto"
-      >
-        {busy ? "Searching flights…" : "Search flights"}
-      </button>
     </form>
   );
 }
