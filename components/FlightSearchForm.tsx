@@ -227,11 +227,11 @@ export function FlightSearchForm() {
         </label>
       </div>
 
-      {/* Unified search bar — stacked on mobile, horizontal on desktop */}
+      {/* Search bar: stacked on mobile; desktop = row1 (From|To) + row2 (dates|cabin|search) */}
       <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex flex-col lg:flex-row lg:items-stretch">
-          {/* Airports — separate rows on mobile, side-by-side on desktop */}
-          <div className="flex min-w-0 flex-[2] flex-col lg:flex-row lg:border-r lg:border-slate-100 dark:lg:border-slate-800">
+        <div className="flex flex-col">
+          {/* Row 1 — airports */}
+          <div className="flex flex-col border-b border-slate-100 dark:border-slate-800 lg:flex-row">
             <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:border-r lg:px-6 lg:py-5">
               <AirportField
                 name="origin"
@@ -241,7 +241,7 @@ export function FlightSearchForm() {
                 placeholder="City or airport"
               />
             </div>
-            <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:px-6 lg:py-5">
+            <div className="px-5 py-4 lg:flex-1 lg:px-6 lg:py-5">
               <AirportField
                 name="destination"
                 label="To"
@@ -252,10 +252,10 @@ export function FlightSearchForm() {
             </div>
           </div>
 
-          {/* Dates + cabin */}
-          <div className="flex flex-col sm:flex-row lg:shrink-0">
-            <div className="flex border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r lg:min-w-[17rem]">
-              <label className="flex min-w-[8.5rem] flex-1 flex-col border-r border-slate-100 px-5 py-4 dark:border-slate-800 lg:px-5 lg:py-5">
+          {/* Row 2 — dates, cabin, search */}
+          <div className="flex flex-col sm:flex-row sm:items-stretch">
+            <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r">
+              <label className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:border-b-0 sm:border-r sm:px-5 sm:py-5 lg:min-w-[10rem]">
                 <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Depart
                 </span>
@@ -267,7 +267,7 @@ export function FlightSearchForm() {
                 />
               </label>
               {trip === "round" && (
-                <label className="flex min-w-[8.5rem] flex-1 flex-col px-5 py-4 lg:px-5 lg:py-5">
+                <label className="flex min-w-0 flex-1 flex-col px-5 py-4 sm:px-5 sm:py-5 lg:min-w-[10rem]">
                   <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Return
                   </span>
@@ -281,7 +281,7 @@ export function FlightSearchForm() {
               )}
             </div>
 
-            <label className="flex flex-col justify-center border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:min-w-[8rem] sm:border-b-0 lg:px-5 lg:py-5">
+            <label className="flex flex-col justify-center border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:w-36 sm:shrink-0 sm:border-b-0 sm:border-r sm:px-5 sm:py-5">
               <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Cabin
               </span>
@@ -296,24 +296,23 @@ export function FlightSearchForm() {
                 <option value="first">First</option>
               </select>
             </label>
-          </div>
 
-          {/* Search button */}
-          <div className="flex items-stretch p-4 lg:p-3 lg:pl-2">
-            <button
-              type="submit"
-              disabled={busy}
-              className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 lg:min-w-[7.5rem] lg:self-center lg:py-5"
-            >
-              {busy ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Searching…
-                </span>
-              ) : (
-                "Search"
-              )}
-            </button>
+            <div className="flex items-stretch p-4 sm:p-3 sm:pl-2">
+              <button
+                type="submit"
+                disabled={busy}
+                className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 sm:min-w-[7.5rem] sm:self-center sm:py-5"
+              >
+                {busy ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Searching…
+                  </span>
+                ) : (
+                  "Search"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
