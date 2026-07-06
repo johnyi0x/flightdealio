@@ -8,7 +8,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-3xl space-y-6">
+        <div className="relative mx-auto max-w-4xl space-y-6">
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tight text-white sm:text-4xl">
               Find the right flight at the right price

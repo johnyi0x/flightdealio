@@ -227,64 +227,68 @@ export function FlightSearchForm() {
         </label>
       </div>
 
-      {/* Unified search bar — desktop horizontal, mobile stacked */}
+      {/* Unified search bar — stacked on mobile, horizontal on desktop */}
       <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
-        {/* Row 1: airports */}
-        <div className="flex flex-col md:flex-row md:items-stretch">
-          <div className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-4 py-3 dark:border-slate-800 md:flex-row md:items-center md:gap-4 md:border-b-0 md:border-r md:py-4">
-            <AirportField
-              name="origin"
-              label="From"
-              required
-              variant="compact"
-              placeholder="City or airport"
-            />
-            <AirportField
-              name="destination"
-              label="To"
-              required
-              variant="compact"
-              placeholder="City or airport"
-            />
+        <div className="flex flex-col lg:flex-row lg:items-stretch">
+          {/* Airports — separate rows on mobile, side-by-side on desktop */}
+          <div className="flex min-w-0 flex-[2] flex-col lg:flex-row lg:border-r lg:border-slate-100 dark:lg:border-slate-800">
+            <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:border-r lg:px-6 lg:py-5">
+              <AirportField
+                name="origin"
+                label="From"
+                required
+                variant="compact"
+                placeholder="City or airport"
+              />
+            </div>
+            <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:px-6 lg:py-5">
+              <AirportField
+                name="destination"
+                label="To"
+                required
+                variant="compact"
+                placeholder="City or airport"
+              />
+            </div>
           </div>
 
-          {/* Row 2 on mobile / right section on desktop: dates + cabin */}
-          <div className="flex flex-col sm:flex-row md:shrink-0">
-            <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r">
-              <label className="flex flex-1 flex-col border-r border-slate-100 px-4 py-3 dark:border-slate-800 md:py-4">
-                <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {/* Dates + cabin */}
+          <div className="flex flex-col sm:flex-row lg:shrink-0">
+            <div className="flex border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r lg:min-w-[17rem]">
+              <label className="flex min-w-[8.5rem] flex-1 flex-col border-r border-slate-100 px-5 py-4 dark:border-slate-800 lg:px-5 lg:py-5">
+                <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Depart
                 </span>
                 <input
                   name="departureDate"
                   type="date"
                   required
-                  className="w-full border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+                  className="w-full min-h-[2.25rem] border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
                 />
               </label>
               {trip === "round" && (
-                <label className="flex flex-1 flex-col px-4 py-3 md:py-4">
-                  <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="flex min-w-[8.5rem] flex-1 flex-col px-5 py-4 lg:px-5 lg:py-5">
+                  <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Return
                   </span>
                   <input
                     name="returnDate"
                     type="date"
                     required
-                    className="w-full border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+                    className="w-full min-h-[2.25rem] border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
                   />
                 </label>
               )}
             </div>
 
-            <label className="flex flex-col justify-center border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:w-36 sm:border-b-0 md:py-4">
-              <span className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <label className="flex flex-col justify-center border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:min-w-[8rem] sm:border-b-0 lg:px-5 lg:py-5">
+              <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Cabin
               </span>
               <select
                 name="cabinClass"
                 defaultValue="economy"
-                className="w-full cursor-pointer border-0 bg-transparent p-0 text-sm font-medium text-slate-900 outline-none dark:text-slate-100"
+                className="w-full min-h-[2.25rem] cursor-pointer border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
               >
                 <option value="economy">Economy</option>
                 <option value="premium_economy">Premium economy</option>
@@ -295,11 +299,11 @@ export function FlightSearchForm() {
           </div>
 
           {/* Search button */}
-          <div className="flex items-stretch p-3 md:p-2">
+          <div className="flex items-stretch p-4 lg:p-3 lg:pl-2">
             <button
               type="submit"
               disabled={busy}
-              className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 md:w-auto md:min-w-[120px] md:self-center md:rounded-xl md:py-4"
+              className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 lg:min-w-[7.5rem] lg:self-center lg:py-5"
             >
               {busy ? (
                 <span className="inline-flex items-center gap-2">

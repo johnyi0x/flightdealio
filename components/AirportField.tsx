@@ -81,18 +81,21 @@ export function AirportField({
   }, [query, runSearch]);
 
   const updateDropdownPosition = useCallback(() => {
-    const el = inputRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
+    const wrap = wrapRef.current;
+    const input = inputRef.current;
+    if (!wrap || !input) return;
+    const wrapRect = wrap.getBoundingClientRect();
+    const inputRect = input.getBoundingClientRect();
+    const minW = compact ? 280 : 220;
     setDropdownStyle({
       position: "fixed",
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      top: inputRect.bottom + 6,
+      left: wrapRect.left,
+      width: Math.max(wrapRect.width, minW),
       zIndex: 9999,
-      maxHeight: Math.min(280, window.innerHeight - rect.bottom - 16),
+      maxHeight: Math.min(320, window.innerHeight - inputRect.bottom - 20),
     });
-  }, []);
+  }, [compact]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -145,7 +148,7 @@ export function AirportField({
         <li key={`${idx}-${r.label}`} role="option">
           <button
             type="button"
-            className="w-full px-3 py-2.5 text-left hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800 dark:active:bg-slate-700"
+            className="w-full px-4 py-3 text-left text-sm leading-snug hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800 dark:active:bg-slate-700"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => pickPlace(r)}
           >
@@ -157,14 +160,14 @@ export function AirportField({
   );
 
   return (
-    <div ref={wrapRef} className="relative min-w-0 flex-1">
+    <div ref={wrapRef} className="relative min-w-0 flex-1 md:min-w-[10rem] lg:min-w-[12rem]">
       {!compact && (
         <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
           {label}
         </span>
       )}
       {compact && (
-        <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {label}
         </span>
       )}
@@ -185,7 +188,7 @@ export function AirportField({
         aria-autocomplete="list"
         className={
           compact
-            ? "w-full border-0 bg-transparent px-0 py-1 text-sm font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+            ? "w-full min-h-[2.25rem] border-0 bg-transparent px-0 py-2 text-base font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 sm:text-sm dark:text-slate-100 dark:placeholder:text-slate-500"
             : "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-brand-500/30 focus:border-brand-500 focus:ring-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
         }
       />
