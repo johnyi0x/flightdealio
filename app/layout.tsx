@@ -67,7 +67,7 @@ export default function RootLayout({
                 Flights
               </Link>
               <a
-                href={process.env.NEXT_PUBLIC_WHITELABEL_URL?.trim() || "https://flights.flightdealio.com"}
+                href="/live-search"
                 className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950 sm:px-3 sm:text-sm"
               >
                 Live search

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="description" content="FlightDealio — search live flights and compare partner fares." />
+    <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+
+    <meta property="og:title" content="FlightDealio — Search Flights" />
+    <meta property="og:description" content="Search live flights on FlightDealio. Compare partner fares, then book on the seller you choose." />
+    <meta content="en_US" property="og:locale" />
+    <meta content="website" property="og:type" />
+    <meta content="[:og_image:]" property="og:image" />
+
+    <meta content="FlightDealio — Search Flights" name="twitter:title" />
+    <meta content="Search live flights on FlightDealio. Compare partner fares, then book on the seller you choose." name="twitter:description" />
+    <meta content="summary_large_image" name="twitter:card" />
+    <title>FlightDealio — Search Flights[:route_info:]</title>
+
+    <!-- Google Ads / gtag (same ID as main site) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18381531931"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'AW-18381531931');
+      /**
+       * Explicit conversion event for Google Ads action "구독"
+       * Conversion ID AW-18381531931 / label cQKgCNCNv98ceJvW_7xE
+       * Fires on live-search White Label loads (treat as "search / results" conversion).
+       * Prefer this over fragile "URL starts with" auto-detect across subdomains.
+       */
+      gtag('event', 'conversion', {
+        send_to: 'AW-18381531931/cQKgCNCNv98ceJvW_7xE'
+      });
+    </script>
+
+    <!-- Theme bootstrap (matches main site key: theme_choice) -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme_choice') || 'dark';
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = stored === 'dark' ? true : stored === 'light' ? false : !!prefersDark;
+          document.documentElement.classList.toggle('dark', isDark);
+          document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
+
+    <style>
+      :root {
+        --fd-brand: #2563eb;
+        --fd-brand-hover: #1d4ed8;
+        --fd-hero: #0c4a6e;
+        --fd-hero-dark: #082f49;
+        --fd-bg: #f8fafc;
+        --fd-surface: #ffffff;
+        --fd-text: #0f172a;
+        --fd-muted: #64748b;
+        --fd-border: #e2e8f0;
+        --fd-header-bg: rgba(255, 255, 255, 0.92);
+        --tpwl-main-text: #0f172a;
+        --tpwl-headline-text: #ffffff;
+        --tpwl-links: #2563eb;
+        --tpwl-search-form-background: #0c4a6e;
+        --tpwl-search-result-background: #f8fafc;
+        --tpwl-font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      html.dark {
+        --fd-bg: #020617;
+        --fd-surface: #0f172a;
+        --fd-text: #f1f5f9;
+        --fd-muted: #94a3b8;
+        --fd-border: #1e293b;
+        --fd-header-bg: rgba(2, 6, 23, 0.92);
+        --tpwl-main-text: #f1f5f9;
+        --tpwl-headline-text: #ffffff;
+        --tpwl-links: #60a5fa;
+        --tpwl-search-form-background: #082f49;
+        --tpwl-search-result-background: #020617;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 0;
+        color: var(--tpwl-main-text);
+        background-color: var(--tpwl-search-result-background);
+        font-family: var(--tpwl-font-family), sans-serif;
+        min-height: 100vh;
+      }
+      body a {
+        color: var(--tpwl-links);
+        text-decoration: none;
+        cursor: pointer;
+        transition: 0.1s linear;
+      }
+      body a:hover, body a:focus { text-decoration: underline; }
+
+      /* Top bar — match flightdealio.com header */
+      .fd-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 24px;
+        border-bottom: 1px solid var(--fd-border);
+        background: var(--fd-header-bg);
+        backdrop-filter: blur(10px);
+      }
+      .fd-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--fd-text);
+        font-weight: 800;
+        font-size: 16px;
+        text-decoration: none !important;
+      }
+      .fd-brand:hover { text-decoration: none !important; }
+      .fd-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--fd-brand);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+      }
+      .fd-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fd-nav a {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fd-muted);
+        text-decoration: none !important;
+      }
+      .fd-nav a:hover {
+        background: color-mix(in srgb, var(--fd-border) 60%, transparent);
+        color: var(--fd-text);
+        text-decoration: none !important;
+      }
+      .fd-nav a.is-active { color: var(--fd-brand); }
+
+      .fd-theme {
+        position: relative;
+      }
+      .fd-theme-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--fd-border);
+        background: var(--fd-surface);
+        color: var(--fd-text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .fd-theme-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        width: 180px;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid var(--fd-border);
+        background: var(--fd-surface);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        display: none;
+        z-index: 220;
+      }
+      .fd-theme-menu.open { display: block; }
+      .fd-theme-menu button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--fd-text);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .fd-theme-menu button:hover {
+        background: color-mix(in srgb, var(--fd-border) 70%, transparent);
+      }
+
+      .tpwl-logo-header {
+        position: relative;
+        color: var(--tpwl-headline-text);
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--fd-hero) 0%, #1e3a8a 50%, var(--fd-hero-dark) 100%);
+        padding: 28px 100px 16px;
+        margin-bottom: -20px;
+        z-index: 101;
+        background-size: cover;
+        background-repeat: no-repeat;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+      }
+      .tpwl-logo-header h1 {
+        font-size: 40px;
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .tpwl-logo-header .fd-sub {
+        margin: 8px 0 0;
+        max-width: 520px;
+        font-size: 15px;
+        font-weight: 500;
+        color: rgba(224, 242, 254, 0.9);
+        line-height: 1.45;
+      }
+      .tpwl-search-header {
+        padding: 24px 100px;
+        background: linear-gradient(180deg, var(--fd-hero-dark) 0%, var(--tpwl-search-form-background) 100%);
+        position: sticky;
+        top: 53px;
+        z-index: 100;
+        transition: all 0.3s linear;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+      }
+      .tpwl-logo__wrapper {
+        margin-bottom: 28px;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+      }
+      .tpwl-logo__logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--fd-brand);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+      }
+      .tpwl-logo__logo svg { display: none; }
+      .tpwl-search__wrapper { display: flex; align-items: center; justify-content: center; }
+      .tpwl__content { flex: 1 0 auto; max-width: 1240px; min-width: 976px; }
+      .tpwl-main { background-color: var(--tpwl-search-result-background); padding-top: 8px; }
+      .tpwl-tickets__wrapper #tpwl-tickets:not(:empty) { margin-bottom: 32px; }
+      .tpwl-tickets__wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 100px;
+      }
+      .tpwl-widgets__wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 56px 100px;
+        margin-bottom: 32px;
+      }
+      .tpwl-widgets__wrapper h3 {
+        text-align: center;
+        font-size: 28px;
+        margin: 0 0 28px;
+        color: var(--fd-text);
+        font-weight: 800;
+      }
+      .tpwl-widget-weedles {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+      }
+      .tpwl-widget-weedle { display: flex; justify-content: center; }
+      .tpwl-footer__wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 100px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        background-color: var(--tpwl-search-result-background);
+        border-top: 1px solid var(--fd-border);
+        color: var(--fd-muted);
+      }
+      .tpwl-footer__copyright { margin-bottom: 12px; }
+      .tpwl-footer__links { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+
+      @media (max-width: 389px) {
+        .tpwl-footer__wrapper { padding: 40px 16px; }
+        .tpwl__content { max-width: unset; min-width: unset; }
+        .tpwl-footer__copyright { margin-bottom: 20px; }
+        .tpwl-footer__links { display: block; }
+        .tpwl-footer__links a { display: block; margin-bottom: 16px; }
+        .tpwl-footer__links a:last-child { margin-bottom: 0; }
+      }
+
+      @media (max-width: 1175px) {
+        .fd-topbar { padding: 10px 16px; }
+        .fd-nav .fd-hide-sm { display: none; }
+        .tpwl-logo-header { position: static; padding: 24px 16px 8px; margin-bottom: 0; }
+        .tpwl-logo-header h1 { font-size: 28px; max-width: 512px; }
+        .tpwl__content { max-width: unset; min-width: unset; }
+        .tpwl-search__wrapper { display: block; }
+        .tpwl-search-header { padding: 16px; position: static; }
+        .tpwl-logo__wrapper { margin-bottom: 20px; }
+        .tpwl-tickets__wrapper { padding: 0 16px; }
+        .tpwl-widgets__wrapper { padding: 40px 16px; }
+        .tpwl-widgets__wrapper h3 { font-size: 22px; }
+        .tpwl-widgets__wrapper .tpwl__content { flex: 1 0 100%; }
+        .tpwl-widget-weedles { grid-template-columns: 1fr; }
+        .tpwl-footer__wrapper { padding: 40px 16px; }
+        .tpwl-footer__wrapper .tpwl__content { flex: 1 1 auto; }
+      }
+    </style>
+
+    [:embed_script:]
+    [:cookie_policy_script:]
+  </head>
+
+  <body>
+    <div class="fd-topbar">
+      <a class="fd-brand" href="https://flightdealio.com/">
+        <span class="fd-badge">FD</span>
+        FlightDealio
+      </a>
+      <div class="fd-nav">
+        <a class="fd-hide-sm" href="https://flightdealio.com/">Home</a>
+        <a class="is-active" href="/">Live search</a>
+        <a class="fd-hide-sm" href="https://flightdealio.com/budget">Budget</a>
+        <div class="fd-theme">
+          <button type="button" class="fd-theme-btn" id="fd-theme-btn" aria-label="Theme">Theme</button>
+          <div class="fd-theme-menu" id="fd-theme-menu" role="menu">
+            <button type="button" data-theme="system">System</button>
+            <button type="button" data-theme="light">Light</button>
+            <button type="button" data-theme="dark">Dark</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="tpwl-logo-header">
+      <div class="tpwl-logo__wrapper">
+        <div class="tpwl-logo__logo">FD</div>
+        FlightDealio
+      </div>
+
+      <div class="tpwl-search__wrapper">
+        <div class="tpwl__content">
+          <h1>Your journey begins here</h1>
+          <p class="fd-sub">Live fares from our partners. Select a ticket to finish booking on the seller’s site.</p>
+        </div>
+      </div>
+    </header>
+
+    <header class="tpwl-search-header">
+      <div class="tpwl-search__wrapper">
+        <div class="tpwl__content">
+          <!-- Search form inputs will be rendered here -->
+          <div id="tpwl-search"></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="tpwl-main">
+      <div class="tpwl-tickets__wrapper">
+        <div class="tpwl__content">
+          <!-- Search results will be rendered here -->
+          <div id="tpwl-tickets"></div>
+        </div>
+      </div>
+
+      <div class="tpwl-widgets__wrapper">
+        <div class="tpwl__content">
+          <h3>Popular destinations</h3>
+          <!-- Popular destination widgets will be rendered here -->
+          <div id="tpwl-widget-weedles" class="tpwl-widget-weedles">
+            <!-- Change IATA code in data-destination attribute to show different destinations -->
+            <div class="tpwl-widget-weedle" data-destination="IST" is="weedle"></div>
+            <div class="tpwl-widget-weedle" data-destination="DXB" is="weedle"></div>
+            <div class="tpwl-widget-weedle" data-destination="MOW" is="weedle"></div>
+            <div class="tpwl-widget-weedle" data-destination="LAS" is="weedle"></div>
+            <div class="tpwl-widget-weedle" data-destination="NYC" is="weedle"></div>
+            <div class="tpwl-widget-weedle" data-destination="LON" is="weedle"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="tpwl-footer__wrapper">
+      <div class="tpwl__content">
+        <div class="tpwl-footer__copyright">FlightDealio · Partners via Travelpayouts © [:current_year:]</div>
+
+        <div class="tpwl-footer__links">
+          <a href="https://flightdealio.com/" target="_blank" rel="noopener">Main site</a>
+          <a href="#" target="_blank">Terms of Service</a>
+          <a href="#" target="_blank">Privacy Policy</a>
+          <a href="#" target="_blank">Cookie Policy</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Cookie policy banner will be rendered here -->
+    <div class="tpwl-cookie-banner" id="tpwl-cookie-banner">
+      <div class="tpwl-cookie-banner__logo"></div>
+      <div class="tpwl-cookie-banner__text">To provide a better experience we use cookies to store your search history and selected filters. By clicking or navigating the site, you agree to allow our collection of information through cookies.</div>
+      <div class="tpwl-cookie-banner__actions">
+        <button class="tpwl-cookie-banner__base-button tpwl-cookie-banner__accept" id="tpwl-accept-cookie-btn">Accept</button>
+        <a class="tpwl-cookie-banner__base-button tpwl-cookie-banner__link" href="#" target="_blank">Cookies Policy</a>
+      </div>
+    </div>
+
+    <script>
+      // Theme switcher (system / light / dark) — same localStorage key as main site
+      (function () {
+        var btn = document.getElementById('fd-theme-btn');
+        var menu = document.getElementById('fd-theme-menu');
+        if (!btn || !menu) return;
+
+        function applyTheme(choice) {
+          try { localStorage.setItem('theme_choice', choice); } catch (e) {}
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = choice === 'dark' ? true : choice === 'light' ? false : !!prefersDark;
+          document.documentElement.classList.toggle('dark', isDark);
+          document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+          btn.textContent = choice === 'system' ? 'System' : choice === 'light' ? 'Light' : 'Dark';
+        }
+
+        var stored = 'dark';
+        try { stored = localStorage.getItem('theme_choice') || 'dark'; } catch (e) {}
+        applyTheme(stored);
+
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          menu.classList.toggle('open');
+        });
+        menu.querySelectorAll('[data-theme]').forEach(function (el) {
+          el.addEventListener('click', function () {
+            applyTheme(el.getAttribute('data-theme'));
+            menu.classList.remove('open');
+          });
+        });
+        document.addEventListener('click', function () { menu.classList.remove('open'); });
+
+        if (window.matchMedia) {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+            var c = 'dark';
+            try { c = localStorage.getItem('theme_choice') || 'dark'; } catch (e) {}
+            if (c === 'system') applyTheme('system');
+          });
+        }
+      })();
+    </script>
+
+    <script>
+      // script is required to render popular destinations widgets
+      (function () {
+        const container = document.getElementById('tpwl-widget-weedles');
+        const weedleElements = container.querySelectorAll('div[is="weedle"]');
+
+        weedleElements.forEach(element => {
+          if (!TPWL_EXTRA) return;
+          const destination = element.getAttribute('data-destination');
+          const scriptElement = document.createElement('script');
+          scriptElement.async = 1;
+          scriptElement.src = `https://[:widget_domain:]/content?currency=${String(TPWL_EXTRA.currency).toLowerCase()}&trs=${TPWL_EXTRA.trs}&shmarker=${TPWL_EXTRA.marker}&destination=${destination}&target_host=${TPWL_EXTRA.domain}&locale=${TPWL_EXTRA.locale}&limit=6&powered_by=false&primary=%23${TPWL_EXTRA.link_color}&promo_id=4044&campaign_id=100`;
+          element.appendChild(scriptElement);
+        });
+      })();
+    </script>
+  </body>
+</html>

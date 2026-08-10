@@ -1,0 +1,30 @@
+---
+description: Keep Travelpayouts White Label HTML in sync with main site UI
+alwaysApply: true
+---
+
+# White Label page sync (`whitelabel/flightdealio-wl.html`)
+
+`flights.flightdealio.com` is **not** a Next.js route. It is Travelpayouts White Label HTML stored in this repo as:
+
+`whitelabel/flightdealio-wl.html`
+
+Treat that file as a **real product page** (header/nav, brand, theme, Google tag).
+
+## When you must update it
+
+If you change any of the following on the **main site**, update the White Label HTML to match:
+
+- Header / logo / nav links (Flights, Live search, Budget, future menu items)
+- Brand name, colors, hero feel
+- Theme switcher behavior (`theme_choice` localStorage)
+- Google Ads gtag ID / conversion `send_to` label
+
+Preserve all Travelpayouts placeholders and mounts:
+
+- `[:embed_script:]`, `[:cookie_policy_script:]`, `[:og_image:]`, `[:route_info:]`, `[:current_year:]`, `[:widget_domain:]`
+- `#tpwl-search`, `#tpwl-tickets`, `#tpwl-widget-weedles`, cookie banner markup
+
+## After editing
+
+Always tell the user to **re-paste the file into Travelpayouts → White Label → Edit → Custom HTML → Save**, then hard-refresh `https://flights.flightdealio.com`.

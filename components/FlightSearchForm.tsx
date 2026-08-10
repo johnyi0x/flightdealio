@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
-import { buildWhiteLabelSearchUrl } from "@/lib/whiteLabel";
+import { buildWhiteLabelSearchUrl, WHITELABEL_BASE_URL } from "@/lib/whiteLabel";
 
 export function FlightSearchForm() {
   const [trip, setTrip] = useState<"round" | "one">("round");
@@ -29,7 +29,7 @@ export function FlightSearchForm() {
       return;
     }
 
-    const url = buildWhiteLabelSearchUrl({
+    const wlUrl = buildWhiteLabelSearchUrl({
       origin,
       destination,
       departureDate,
@@ -38,14 +38,26 @@ export function FlightSearchForm() {
       adults: 1,
     });
 
-    if (!url) {
+    if (!wlUrl) {
       setError("Check your dates and try again.");
       return;
     }
 
+    // Route via main-domain bridge so Google Ads can detect the conversion on
+    // flightdealio.com/live-search, then redirect to White Label.
+    let flightSearch = "";
+    try {
+      flightSearch = new URL(wlUrl).searchParams.get("flightSearch") || "";
+    } catch {
+      setError("Could not build search link.");
+      return;
+    }
+
     setBusy(true);
-    // Live results on FlightDealio White Label (Travelpayouts / Aviasales).
-    window.location.assign(url);
+    const bridge = flightSearch
+      ? `/live-search?flightSearch=${encodeURIComponent(flightSearch)}`
+      : "/live-search";
+    window.location.assign(bridge);
   }
 
   return (
@@ -169,6 +181,8 @@ export function FlightSearchForm() {
           {error}
         </p>
       )}
+
+      <p className="sr-only">White Label: {WHITELABEL_BASE_URL}</p>
     </form>
   );
 }

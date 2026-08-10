@@ -54,6 +54,13 @@ export default function HomePage() {
       <p className="mx-auto mt-6 max-w-3xl px-4 text-center text-xs text-slate-500 dark:text-slate-400 sm:px-0">
         Live search:{" "}
         <a
+          href="/live-search"
+          className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
+        >
+          flightdealio.com/live-search
+        </a>
+        {" → "}
+        <a
           href={WHITELABEL_BASE_URL}
           className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
         >
