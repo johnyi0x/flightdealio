@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { SiteHeader } from "@/components/SiteHeader";
 
 const GOOGLE_ADS_ID =
   process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-18381531931";
@@ -12,30 +11,6 @@ export const metadata: Metadata = {
   title: "FlightDealio — Search flights",
   description: "Search flights and compare deals on FlightDealio.",
 };
-
-function NavLink({
-  href,
-  children,
-  soon,
-}: {
-  href: string;
-  children: React.ReactNode;
-  soon?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 sm:px-2.5 sm:text-sm"
-    >
-      {children}
-      {soon && (
-        <span className="rounded bg-slate-100 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-          Soon
-        </span>
-      )}
-    </Link>
-  );
-}
 
 export default function RootLayout({
   children,
@@ -70,32 +45,7 @@ export default function RootLayout({
     document.head.appendChild(script);
   })();`}
         </Script>
-        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/90">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-3">
-            <Link
-              href="/"
-              className="flex shrink-0 items-center gap-2 text-base font-bold tracking-tight text-slate-900 dark:text-white"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-xs font-black text-white">
-                FD
-              </span>
-              FlightDealio
-            </Link>
-            <nav className="flex flex-wrap items-center justify-end gap-0.5 sm:gap-1">
-              <NavLink href="/">Flights</NavLink>
-              <NavLink href="/stays" soon>
-                Stays
-              </NavLink>
-              <NavLink href="/taxi" soon>
-                Taxi
-              </NavLink>
-              <NavLink href="/esim" soon>
-                eSIM
-              </NavLink>
-              <ThemeSwitcher />
-            </nav>
-          </div>
-        </header>
+        <SiteHeader />
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">{children}</main>
         <footer className="mt-auto border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
           <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-6 sm:flex-row sm:items-center sm:justify-between">
