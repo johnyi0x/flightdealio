@@ -8,7 +8,7 @@ const LINKS: { href: string; label: string; soon?: boolean }[] = [
   { href: "/", label: "Flights" },
   { href: "/stays", label: "Stays", soon: true },
   { href: "/taxi", label: "Taxi", soon: true },
-  { href: "/cars", label: "Cars", soon: true },
+  { href: "/cars", label: "Cars" },
 ];
 
 function SoonBadge() {

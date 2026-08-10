@@ -315,7 +315,7 @@
         color: var(--tpwl-headline-text);
         font-weight: 600;
         background: linear-gradient(135deg, var(--fd-hero) 0%, #1e3a8a 50%, var(--fd-hero-dark) 100%);
-        padding: 28px 100px 16px;
+        padding: 40px 100px 20px;
         margin-bottom: -20px;
         z-index: 101;
         background-size: cover;
@@ -348,27 +348,11 @@
         backface-visibility: hidden;
       }
       .tpwl-logo__wrapper {
-        margin-bottom: 28px;
-        font-size: 15px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 700;
+        display: none;
       }
       .tpwl-logo__logo {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        background: var(--fd-brand);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: -0.5px;
+        display: none;
       }
-      .tpwl-logo__logo svg { display: none; }
       .tpwl-search__wrapper { display: flex; align-items: center; justify-content: center; }
       .tpwl__content { flex: 1 0 auto; max-width: 1240px; min-width: 976px; }
       .tpwl-main { background-color: var(--tpwl-search-result-background); padding-top: 8px; }
@@ -424,12 +408,11 @@
       }
 
       @media (max-width: 1175px) {
-        .tpwl-logo-header { position: static; padding: 24px 16px 8px; margin-bottom: 0; }
+        .tpwl-logo-header { position: static; padding: 28px 16px 12px; margin-bottom: 0; }
         .tpwl-logo-header h1 { font-size: 28px; max-width: 512px; }
         .tpwl__content { max-width: unset; min-width: unset; }
         .tpwl-search__wrapper { display: block; }
         .tpwl-search-header { padding: 16px; position: static; }
-        .tpwl-logo__wrapper { margin-bottom: 20px; }
         .tpwl-tickets__wrapper { padding: 0 16px; }
         .tpwl-widgets__wrapper { padding: 40px 16px; }
         .tpwl-widgets__wrapper h3 { font-size: 22px; }
@@ -456,7 +439,7 @@
           <a class="is-active" href="https://flightdealio.com/">Flights</a>
           <a href="https://flightdealio.com/stays">Stays <span class="fd-soon">Soon</span></a>
           <a href="https://flightdealio.com/taxi">Taxi <span class="fd-soon">Soon</span></a>
-          <a href="https://flightdealio.com/cars">Cars <span class="fd-soon">Soon</span></a>
+          <a href="https://flightdealio.com/cars">Cars</a>
           <div class="fd-theme">
             <button type="button" class="fd-theme-btn" id="fd-theme-btn" aria-label="Theme">Theme</button>
             <div class="fd-theme-menu" id="fd-theme-menu" role="menu">
@@ -489,21 +472,16 @@
           <a href="https://flightdealio.com/">Flights</a>
           <a href="https://flightdealio.com/stays">Stays <span class="fd-soon">Soon</span></a>
           <a href="https://flightdealio.com/taxi">Taxi <span class="fd-soon">Soon</span></a>
-          <a href="https://flightdealio.com/cars">Cars <span class="fd-soon">Soon</span></a>
+          <a href="https://flightdealio.com/cars">Cars</a>
         </nav>
       </div>
     </div>
 
     <header class="tpwl-logo-header">
-      <div class="tpwl-logo__wrapper">
-        <div class="tpwl-logo__logo">FD</div>
-        FlightDealio
-      </div>
-
       <div class="tpwl-search__wrapper">
         <div class="tpwl__content">
-          <h1>Your journey begins here</h1>
-          <p class="fd-sub">Compare live fares for your route, then book the option that works for you.</p>
+          <h1>Fly farther with FlightDealio</h1>
+          <p class="fd-sub">Search live fares, compare your options, and take off with the deal that fits your trip.</p>
         </div>
       </div>
     </header>
