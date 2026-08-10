@@ -1,5 +1,4 @@
 import { FlightSearchForm } from "@/components/FlightSearchForm";
-import { WHITELABEL_BASE_URL } from "@/lib/whiteLabel";
 
 export default function HomePage() {
   return (
@@ -14,11 +13,10 @@ export default function HomePage() {
               FlightDealio
             </p>
             <h1 className="max-w-2xl text-2xl font-bold tracking-tight text-white sm:text-4xl">
-              Search live flights. Compare. Book with partners.
+              Find the right flight at the right price
             </h1>
             <p className="max-w-xl text-sm leading-relaxed text-sky-100/90 sm:text-base">
-              Start your search here. We open live fares on FlightDealio&apos;s partner search —
-              then you finish booking on the seller&apos;s site.
+              Search routes and dates, compare options, and book the deal that works for you.
             </p>
           </div>
 
@@ -29,16 +27,16 @@ export default function HomePage() {
       <section className="mx-auto mt-8 grid max-w-3xl gap-4 px-4 sm:grid-cols-3 sm:px-0">
         {[
           {
-            title: "Search on FlightDealio",
-            body: "Enter your trip on this page — results load on our live search.",
+            title: "Search your trip",
+            body: "Enter airports and dates — we show live fares for your route.",
           },
           {
-            title: "Live partner fares",
-            body: "See current prices from Aviasales-powered metasearch, not stale cache.",
+            title: "Compare options",
+            body: "See prices and flight details side by side before you decide.",
           },
           {
-            title: "Book where you choose",
-            body: "Checkout stays on the partner site. FlightDealio earns when you book.",
+            title: "Book with confidence",
+            body: "Choose an offer and complete checkout with the seller you pick.",
           },
         ].map((item) => (
           <div
@@ -50,23 +48,6 @@ export default function HomePage() {
           </div>
         ))}
       </section>
-
-      <p className="mx-auto mt-6 max-w-3xl px-4 text-center text-xs text-slate-500 dark:text-slate-400 sm:px-0">
-        Live search:{" "}
-        <a
-          href="/live-search"
-          className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
-        >
-          flightdealio.com/live-search
-        </a>
-        {" → "}
-        <a
-          href={WHITELABEL_BASE_URL}
-          className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
-        >
-          {WHITELABEL_BASE_URL.replace(/^https?:\/\//, "")}
-        </a>
-      </p>
     </div>
   );
 }

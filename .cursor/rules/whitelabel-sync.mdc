@@ -15,7 +15,7 @@ Treat that file as a **real product page** (header/nav, brand, theme, Google tag
 
 If you change any of the following on the **main site**, update the White Label HTML to match:
 
-- Header / logo / nav links (Flights, Live search, Budget, future menu items)
+- Header / logo / nav links (Flights, Stays, Taxi, eSIM, future menu items)
 - Brand name, colors, hero feel
 - Theme switcher behavior (`theme_choice` localStorage)
 - Google Ads gtag ID / conversion `send_to` label

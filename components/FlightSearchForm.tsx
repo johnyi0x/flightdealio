@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { AirportField } from "@/components/AirportField";
-import { buildWhiteLabelSearchUrl, WHITELABEL_BASE_URL } from "@/lib/whiteLabel";
+import { buildWhiteLabelSearchUrl } from "@/lib/whiteLabel";
 
 export function FlightSearchForm() {
   const [trip, setTrip] = useState<"round" | "one">("round");
@@ -43,8 +43,6 @@ export function FlightSearchForm() {
       return;
     }
 
-    // Route via main-domain bridge so Google Ads can detect the conversion on
-    // flightdealio.com/live-search, then redirect to White Label.
     let flightSearch = "";
     try {
       flightSearch = new URL(wlUrl).searchParams.get("flightSearch") || "";
@@ -52,12 +50,16 @@ export function FlightSearchForm() {
       setError("Could not build search link.");
       return;
     }
+    if (!flightSearch) {
+      setError("Could not build search link.");
+      return;
+    }
 
     setBusy(true);
-    const bridge = flightSearch
-      ? `/live-search?flightSearch=${encodeURIComponent(flightSearch)}`
-      : "/live-search";
-    window.location.assign(bridge);
+    // Bridge only with a real search — Ads conversion requires flightSearch=
+    window.location.assign(
+      `/live-search?flightSearch=${encodeURIComponent(flightSearch)}`,
+    );
   }
 
   return (
@@ -158,7 +160,7 @@ export function FlightSearchForm() {
                 {busy ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Opening…
+                    Searching…
                   </span>
                 ) : (
                   "Search flights"
@@ -169,20 +171,11 @@ export function FlightSearchForm() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-sky-100/80 sm:text-left">
-        Live results open on{" "}
-        <span className="font-semibold text-white">flights.flightdealio.com</span>
-        {" — "}
-        FlightDealio search powered by our partners. Book on the seller you choose.
-      </p>
-
       {error && (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
           {error}
         </p>
       )}
-
-      <p className="sr-only">White Label: {WHITELABEL_BASE_URL}</p>
     </form>
   );
 }
