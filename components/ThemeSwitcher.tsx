@@ -26,17 +26,20 @@ export function ThemeSwitcher() {
     if (choice === null) return;
     localStorage.setItem("theme_choice", choice);
 
+    const applyScheme = (isDark: boolean) => {
+      document.documentElement.classList.toggle("dark", isDark);
+      document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+    };
+
     if (choice === "system") {
       const media = window.matchMedia?.("(prefers-color-scheme: dark)");
-      const apply = () => {
-        document.documentElement.classList.toggle("dark", !!media?.matches);
-      };
+      const apply = () => applyScheme(!!media?.matches);
       apply();
       media?.addEventListener?.("change", apply);
       return () => media?.removeEventListener?.("change", apply);
     }
 
-    document.documentElement.classList.toggle("dark", choice === "dark");
+    applyScheme(choice === "dark");
   }, [choice]);
 
   const icon = useMemo(() => {

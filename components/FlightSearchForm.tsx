@@ -1,8 +1,21 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { AirportField } from "@/components/AirportField";
 import { buildWhiteLabelSearchUrl } from "@/lib/whiteLabel";
+
+function openNativeDatePicker(e: MouseEvent<HTMLInputElement>) {
+  const el = e.currentTarget;
+  try {
+    // Opens calendar when clicking the mm/dd/yyyy text, not only the icon
+    el.showPicker?.();
+  } catch {
+    // Unsupported / already open — ignore
+  }
+}
+
+const dateInputClass =
+  "w-full min-h-[2.25rem] cursor-pointer border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100";
 
 export function FlightSearchForm() {
   const [trip, setTrip] = useState<"round" | "one">("round");
@@ -84,7 +97,7 @@ export function FlightSearchForm() {
         </div>
       </div>
 
-      <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-col">
           <div className="flex flex-col border-b border-slate-100 dark:border-slate-800 lg:flex-row">
             <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:border-r lg:px-6 lg:py-5">
@@ -107,9 +120,9 @@ export function FlightSearchForm() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-stretch">
-            <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 sm:border-b-0 sm:border-r">
-              <label className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:border-b-0 sm:border-r sm:px-5 sm:py-5 lg:min-w-[10rem]">
+          <div className="flex flex-col lg:flex-row lg:items-stretch">
+            <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 lg:border-b-0 lg:border-r">
+              <label className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:border-b-0 sm:border-r sm:px-5 sm:py-5 lg:min-w-[10rem]">
                 <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Depart
                 </span>
@@ -117,11 +130,12 @@ export function FlightSearchForm() {
                   name="departureDate"
                   type="date"
                   required
-                  className="w-full min-h-[2.25rem] border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
+                  onClick={openNativeDatePicker}
+                  className={dateInputClass}
                 />
               </label>
               {trip === "round" && (
-                <label className="flex min-w-0 flex-1 flex-col px-5 py-4 sm:px-5 sm:py-5 lg:min-w-[10rem]">
+                <label className="flex min-w-0 flex-1 flex-col px-4 py-4 sm:px-5 sm:py-5 lg:min-w-[10rem]">
                   <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Return
                   </span>
@@ -129,13 +143,14 @@ export function FlightSearchForm() {
                     name="returnDate"
                     type="date"
                     required
-                    className="w-full min-h-[2.25rem] border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
+                    onClick={openNativeDatePicker}
+                    className={dateInputClass}
                   />
                 </label>
               )}
             </div>
 
-            <label className="flex flex-col justify-center border-b border-slate-100 px-5 py-4 dark:border-slate-800 sm:w-36 sm:shrink-0 sm:border-b-0 sm:border-r sm:px-5 sm:py-5">
+            <label className="flex flex-col justify-center border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5 sm:py-5 lg:w-36 lg:shrink-0 lg:border-b-0 lg:border-r">
               <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Cabin
               </span>
@@ -151,11 +166,11 @@ export function FlightSearchForm() {
               </select>
             </label>
 
-            <div className="flex items-stretch p-4 sm:p-3 sm:pl-2">
+            <div className="flex w-full shrink-0 p-3 lg:w-auto lg:items-stretch lg:self-stretch lg:p-3 lg:pl-2">
               <button
                 type="submit"
                 disabled={busy}
-                className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 sm:min-w-[7.5rem] sm:self-center sm:py-5"
+                className="flex w-full items-center justify-center rounded-xl bg-brand-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 lg:min-w-[8rem] lg:self-center lg:px-6 lg:py-5"
               >
                 {busy ? (
                   <span className="inline-flex items-center gap-2">
