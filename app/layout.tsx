@@ -5,6 +5,10 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
+/** Google Ads tag (gtag.js). Override via Vercel env NEXT_PUBLIC_GOOGLE_ADS_ID if needed. */
+const GOOGLE_ADS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID?.trim() || "AW-18381531931";
+
 export const metadata: Metadata = {
   title: "FlightDealio — Compare flight deals",
   description: "Search and compare flight prices from partner sellers.",
@@ -23,6 +27,19 @@ export default function RootLayout({
             __html: `(function(){try{var stored=localStorage.getItem('theme_choice');var choice=stored||'dark';var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;var isDark=(choice==='dark')?true:(choice==='light')?false:!!prefersDark;document.documentElement.classList.toggle('dark',isDark);}catch(e){/* ignore */}})();`,
           }}
         />
+        {/* Google Ads — root layout = every page (/, /budget, /flight-results, …) */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads-gtag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GOOGLE_ADS_ID}');
+          `}
+        </Script>
         <Script id="travelpayouts-site-verify" strategy="afterInteractive">
           {`(function () {
     var script = document.createElement("script");
