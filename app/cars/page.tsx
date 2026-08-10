@@ -13,7 +13,7 @@ export default function CarsPage() {
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-sky-400/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-4xl space-y-6">
+        <div className="relative mx-auto w-full max-w-5xl space-y-6">
           <div className="space-y-3">
             <p className="text-lg font-black tracking-tight text-white sm:text-2xl">
               FlightDealio
@@ -27,7 +27,7 @@ export default function CarsPage() {
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200/20 bg-white p-3 shadow-search sm:p-5 dark:border-slate-700 dark:bg-slate-900">
+          <div className="rounded-2xl border border-slate-200/20 bg-white p-3 shadow-search sm:p-5 dark:border-slate-700 dark:bg-slate-900">
             <RentalCarsWidget />
           </div>
         </div>
