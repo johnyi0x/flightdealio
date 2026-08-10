@@ -7,7 +7,7 @@ import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 const LINKS: { href: string; label: string; soon?: boolean }[] = [
   { href: "/", label: "Flights" },
   { href: "/stays", label: "Stays", soon: true },
-  { href: "/taxi", label: "Taxi", soon: true },
+  { href: "/taxi", label: "Taxi" },
   { href: "/cars", label: "Cars" },
 ];
 
