@@ -1,26 +1,117 @@
 "use client";
 
-import { useState, type FormEvent, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type MouseEvent,
+} from "react";
 import { AirportField } from "@/components/AirportField";
 import { buildWhiteLabelSearchUrl } from "@/lib/whiteLabel";
 
 function openNativeDatePicker(e: MouseEvent<HTMLInputElement>) {
   const el = e.currentTarget;
   try {
-    // Opens calendar when clicking the mm/dd/yyyy text, not only the icon
     el.showPicker?.();
   } catch {
-    // Unsupported / already open — ignore
+    // Unsupported / already open
   }
 }
 
 const dateInputClass =
   "w-full min-h-[2.25rem] cursor-pointer border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100";
 
+const cellLabelClass =
+  "mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+
+function travelersSummary(adults: number, children: number, infants: number): string {
+  const parts: string[] = [];
+  parts.push(`${adults} adult${adults === 1 ? "" : "s"}`);
+  if (children > 0) parts.push(`${children} child${children === 1 ? "" : "ren"}`);
+  if (infants > 0) parts.push(`${infants} infant${infants === 1 ? "" : "s"}`);
+  return parts.join(", ");
+}
+
+function StepperRow({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400">{hint}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          disabled={value <= min}
+          onClick={() => onChange(Math.max(min, value - 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-base font-bold text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"
+        >
+          −
+        </button>
+        <span className="w-5 text-center text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+          {value}
+        </span>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          disabled={value >= max}
+          onClick={() => onChange(Math.min(max, value + 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-base font-bold text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:text-slate-200"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function FlightSearchForm() {
   const [trip, setTrip] = useState<"round" | "one">("round");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [infants, setInfants] = useState(0);
+  const [travelersOpen, setTravelersOpen] = useState(false);
+  const travelersWrapRef = useRef<HTMLDivElement>(null);
+  const travelersPanelId = useId();
+
+  useEffect(() => {
+    if (!travelersOpen) return;
+    function onDoc(e: Event) {
+      if (!travelersWrapRef.current?.contains(e.target as Node)) {
+        setTravelersOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("touchstart", onDoc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("touchstart", onDoc);
+    };
+  }, [travelersOpen]);
+
+  // Keep infants ≤ adults (Aviasales / WL rule)
+  useEffect(() => {
+    if (infants > adults) setInfants(adults);
+  }, [adults, infants]);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -48,7 +139,9 @@ export function FlightSearchForm() {
       departureDate,
       returnDate: trip === "round" ? returnDate : null,
       cabinClass,
-      adults: 1,
+      adults,
+      children,
+      infants,
     });
 
     if (!wlUrl) {
@@ -75,6 +168,9 @@ export function FlightSearchForm() {
     );
   }
 
+  const maxChildren = Math.max(0, 9 - adults - infants);
+  const maxInfants = Math.min(adults, Math.max(0, 9 - adults - children));
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -97,7 +193,7 @@ export function FlightSearchForm() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
+      <div className="overflow-visible rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-col">
           <div className="flex flex-col border-b border-slate-100 dark:border-slate-800 lg:flex-row">
             <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800 lg:flex-1 lg:border-b-0 lg:border-r lg:px-6 lg:py-5">
@@ -122,10 +218,8 @@ export function FlightSearchForm() {
 
           <div className="flex flex-col lg:flex-row lg:items-stretch">
             <div className="flex flex-1 border-b border-slate-100 dark:border-slate-800 lg:border-b-0 lg:border-r">
-              <label className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:border-b-0 sm:border-r sm:px-5 sm:py-5 lg:min-w-[10rem]">
-                <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Depart
-                </span>
+              <label className="flex min-w-0 flex-1 flex-col border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:border-b-0 sm:border-r sm:px-5 sm:py-5 lg:min-w-[9rem]">
+                <span className={cellLabelClass}>Depart</span>
                 <input
                   name="departureDate"
                   type="date"
@@ -135,10 +229,8 @@ export function FlightSearchForm() {
                 />
               </label>
               {trip === "round" && (
-                <label className="flex min-w-0 flex-1 flex-col px-4 py-4 sm:px-5 sm:py-5 lg:min-w-[10rem]">
-                  <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Return
-                  </span>
+                <label className="flex min-w-0 flex-1 flex-col px-4 py-4 sm:px-5 sm:py-5 lg:min-w-[9rem]">
+                  <span className={cellLabelClass}>Return</span>
                   <input
                     name="returnDate"
                     type="date"
@@ -150,19 +242,77 @@ export function FlightSearchForm() {
               )}
             </div>
 
+            <div
+              ref={travelersWrapRef}
+              className="relative border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5 sm:py-5 lg:w-44 lg:shrink-0 lg:border-b-0 lg:border-r"
+            >
+              <span className={cellLabelClass}>Travelers</span>
+              <button
+                type="button"
+                aria-expanded={travelersOpen}
+                aria-controls={travelersPanelId}
+                onClick={() => setTravelersOpen((v) => !v)}
+                className="flex w-full min-h-[2.25rem] items-center justify-between gap-2 bg-transparent p-0 text-left text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
+              >
+                <span className="truncate">
+                  {travelersSummary(adults, children, infants)}
+                </span>
+                <span className="shrink-0 text-slate-400" aria-hidden>
+                  ▾
+                </span>
+              </button>
+
+              {travelersOpen && (
+                <div
+                  id={travelersPanelId}
+                  className="absolute left-3 right-3 z-40 mt-2 rounded-xl border border-slate-200 bg-white p-3 shadow-lg sm:left-auto sm:right-0 sm:w-72 dark:border-slate-700 dark:bg-slate-900"
+                  role="dialog"
+                  aria-label="Travelers"
+                >
+                  <StepperRow
+                    label="Adults"
+                    hint="12+ years"
+                    value={adults}
+                    min={1}
+                    max={Math.max(1, 9 - children - infants)}
+                    onChange={setAdults}
+                  />
+                  <StepperRow
+                    label="Children"
+                    hint="2–11 years"
+                    value={children}
+                    min={0}
+                    max={maxChildren}
+                    onChange={setChildren}
+                  />
+                  <StepperRow
+                    label="Infants"
+                    hint="Under 2 years"
+                    value={infants}
+                    min={0}
+                    max={maxInfants}
+                    onChange={setInfants}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTravelersOpen(false)}
+                    className="mt-2 w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-bold text-white hover:bg-brand-700"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+
             <label className="flex flex-col justify-center border-b border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5 sm:py-5 lg:w-36 lg:shrink-0 lg:border-b-0 lg:border-r">
-              <span className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Cabin
-              </span>
+              <span className={cellLabelClass}>Cabin</span>
               <select
                 name="cabinClass"
                 defaultValue="economy"
                 className="w-full min-h-[2.25rem] cursor-pointer border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none sm:text-sm dark:text-slate-100"
               >
                 <option value="economy">Economy</option>
-                <option value="premium_economy">Premium economy</option>
                 <option value="business">Business</option>
-                <option value="first">First</option>
               </select>
             </label>
 
