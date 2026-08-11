@@ -37,11 +37,12 @@ export default function RootLayout({
             gtag('config', '${GOOGLE_ADS_ID}');
           `}
         </Script>
-        <Script id="travelpayouts-site-verify" strategy="afterInteractive">
+        <Script id="travelpayouts-drive" strategy="beforeInteractive">
           {`(function () {
     var script = document.createElement("script");
     script.async = 1;
-    script.src = "https://emrldtp.cc/NTEyMDA2.js?t=512006";
+    script.setAttribute("data-cmp-ab", "2");
+    script.src = "https://emrldtp.cc/NTQ0NjM5.js?t=544639";
     document.head.appendChild(script);
   })();`}
         </Script>
