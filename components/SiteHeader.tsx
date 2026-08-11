@@ -9,6 +9,8 @@ const LINKS: { href: string; label: string; soon?: boolean }[] = [
   { href: "/stays", label: "Stays", soon: true },
   { href: "/taxi", label: "Taxi" },
   { href: "/cars", label: "Cars" },
+  { href: "/esim", label: "eSIM" },
+  { href: "/about", label: "About" },
 ];
 
 function SoonBadge() {

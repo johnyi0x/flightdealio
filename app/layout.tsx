@@ -52,9 +52,21 @@ export default function RootLayout({
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
               FlightDealio
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Search flights. More travel tools coming soon.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <a href="/about" className="hover:text-slate-800 dark:hover:text-slate-200">
+                About
+              </a>
+              <a href="/esim" className="hover:text-slate-800 dark:hover:text-slate-200">
+                eSIM
+              </a>
+              <a href="/cars" className="hover:text-slate-800 dark:hover:text-slate-200">
+                Cars
+              </a>
+              <a href="/taxi" className="hover:text-slate-800 dark:hover:text-slate-200">
+                Taxi
+              </a>
+              <span>Search flights. Plan the rest of your trip.</span>
+            </div>
           </div>
         </footer>
         <Analytics />
