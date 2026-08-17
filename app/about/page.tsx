@@ -4,11 +4,11 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "About FlightDealio — Flight search & travel tools",
   description:
-    "FlightDealio helps travelers search flights, compare partner fares, and book with the seller they choose. Also find rental cars, airport transfers, and travel eSIMs.",
+    "FlightDealio helps travelers search flights, compare partner fares, and book with the seller they choose. Also find stays, rental cars, airport transfers, and travel eSIMs.",
   openGraph: {
     title: "About FlightDealio",
     description:
-      "Search flights, compare deals, and book with confidence. Cars, transfers, and eSIM tools too.",
+      "Search flights, compare deals, and book with confidence. Stays, cars, transfers, and eSIM too.",
     type: "website",
     url: "https://flightdealio.com/about",
   },
@@ -29,7 +29,7 @@ export default function AboutPage() {
         </h1>
         <p className="text-base leading-relaxed text-slate-600 dark:text-slate-300">
           FlightDealio is a travel search site that helps you find flights, compare options, and
-          continue to trusted booking partners — plus practical trip tools like rental cars,
+          continue to trusted booking partners — plus practical trip tools like stays, rental cars,
           airport transfers, and travel eSIMs.
         </p>
       </header>
@@ -59,6 +59,7 @@ export default function AboutPage() {
           Enter your airports or cities, travel dates, cabin class, and how many travelers you are.
           FlightDealio runs a live search and shows results powered by our travel partners so you
           can compare prices and flight details, then complete booking with the seller you choose.
+          Stay suggestions for your destination also appear with those results.
         </p>
         <p>
           <Link
@@ -79,6 +80,13 @@ export default function AboutPage() {
         </h2>
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
           <li>
+            <Link href="/stays" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+              Stays
+            </Link>{" "}
+            — hotel options for your destination appear with live flight results; opening them
+            loads partner hotel search in a new tab.
+          </li>
+          <li>
             <Link href="/cars" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
               Rental cars
             </Link>{" "}
@@ -96,10 +104,6 @@ export default function AboutPage() {
             </Link>{" "}
             — get mobile data abroad without swapping a physical SIM.
           </li>
-          <li>
-            <span className="font-semibold text-slate-800 dark:text-slate-200">Stays</span> — hotel
-            and stay search is coming soon.
-          </li>
         </ul>
       </section>
 
@@ -111,10 +115,12 @@ export default function AboutPage() {
           How booking works
         </h2>
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
-          FlightDealio is a search and comparison front door. When you select an offer, you continue
-          to a partner travel agency or brand to finish payment and receive your tickets or
-          confirmation. Prices and availability come from those partners and can change; always
-          confirm the final fare on the booking site before you pay.
+          FlightDealio is a search and comparison front door. When you select a flight offer, you
+          continue to a partner travel agency or brand to finish payment and receive your tickets.
+          Stay options work the same way: they open partner hotel results (including Expedia) in a
+          new tab so you can compare and book there. Prices and availability come from those
+          partners and can change; always confirm the final price on the booking site before you
+          pay.
         </p>
       </section>
 
@@ -135,8 +141,8 @@ export default function AboutPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Ready to go?</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Start with a flight search, or explore cars, transfers, and eSIM for the rest of your
-          trip.
+          Start with a flight search — stays show up with your results — or explore cars,
+          transfers, and eSIM for the rest of your trip.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link

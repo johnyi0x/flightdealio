@@ -57,6 +57,9 @@ export default function RootLayout({
               <a href="/about" className="hover:text-slate-800 dark:hover:text-slate-200">
                 About
               </a>
+              <a href="/stays" className="hover:text-slate-800 dark:hover:text-slate-200">
+                Stays
+              </a>
               <a href="/esim" className="hover:text-slate-800 dark:hover:text-slate-200">
                 eSIM
               </a>
