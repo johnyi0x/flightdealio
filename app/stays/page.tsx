@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "FlightDealio — Stays & hotels",
   description:
-    "Find hotels for your destination on FlightDealio. Search flights, then check Show hotels on live results and press Search to open partner hotel results in a new tab.",
+    "Find hotels for your destination on FlightDealio. Search your flight, then on the results page check Show hotels and press Search to open partner hotel results in a new tab.",
 };
 
 export default function StaysPage() {
@@ -23,44 +23,51 @@ export default function StaysPage() {
               Stay where you land
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-sky-100/90 sm:text-base">
-              Stays are tied to a live flight search. The first results page shows flights; hotels
-              open in a new tab after you search again with Show hotels turned on.
+              Hotel search is built into the live flight results page. Two quick steps to see
+              stays for your destination.
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200/20 bg-white p-5 shadow-search sm:p-7 dark:border-slate-700 dark:bg-slate-900">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              How stays work
+              How to find hotels
             </p>
             <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
               <li>
-                Start on the FlightDealio homepage. Enter from/to, dates, travelers, and cabin,
-                then press Search flights. That opens live flight deals for your route.
-              </li>
-              <li>
-                On that live results page, the search form includes a{" "}
                 <span className="font-semibold text-slate-800 dark:text-slate-100">
-                  Show hotels
+                  Search a flight from this site.
                 </span>{" "}
-                option. Leave it checked (we turn it on for you when the form loads).
+                Enter your route and dates on the homepage and press Search flights. You land on
+                the live flight results page.
               </li>
               <li>
-                Press{" "}
-                <span className="font-semibold text-slate-800 dark:text-slate-100">Search</span>{" "}
-                again on that page. Flights stay on this tab. Stays open in a{" "}
-                <span className="font-semibold text-slate-800 dark:text-slate-100">new tab</span>{" "}
-                with hotel results for the same destination and dates.
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                  On the results page, check Show hotels.
+                </span>{" "}
+                The live search form at the top of that page has a{" "}
+                <span className="font-semibold">Show hotels</span> checkbox. Tick it.
               </li>
               <li>
-                The hotel site can be Booking.com, Expedia, or another partner — it depends on
-                your destination. Finish booking on that partner site.
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                  Press Search again on that page.
+                </span>{" "}
+                Flights stay in the current tab. Hotel results for the same destination open in a{" "}
+                <span className="font-semibold">new tab</span>.
+              </li>
+              <li>
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                  Compare and book.
+                </span>{" "}
+                The hotel tab can be Booking.com, Expedia, or another partner depending on your
+                destination.
               </li>
             </ol>
-            <p className="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              Searching only from the homepage shows flights first. Show hotels is a live-results
-              form option, so the stay tab opens when you search from that page — not from the
-              first homepage click.
-            </p>
+
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+              <strong>Note:</strong> The main search form on this page finds flights only. Show
+              hotels is on the live results page — not the homepage form.
+            </div>
+
             <Link
               href="/"
               className="mt-5 inline-flex rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
@@ -74,16 +81,16 @@ export default function StaysPage() {
       <section className="mx-auto mt-8 grid max-w-3xl gap-4 px-4 sm:grid-cols-3 sm:px-0">
         {[
           {
-            title: "Search flights",
-            body: "Use the homepage form. You land on live fares for your route and dates.",
+            title: "Step 1 — Search flights",
+            body: "Enter route and dates on the homepage. You land on live flight results.",
           },
           {
-            title: "Keep Show hotels on",
-            body: "On the live results form, leave Show hotels checked, then press Search.",
+            title: "Step 2 — Check Show hotels",
+            body: "Tick Show hotels on the live results form, then press Search on that page.",
           },
           {
-            title: "Book in a new tab",
-            body: "Hotel results open separately for that destination — Booking.com, Expedia, or another partner.",
+            title: "Step 3 — Book in a new tab",
+            body: "Hotels for your destination open separately — Booking.com, Expedia, or another partner.",
           },
         ].map((item) => (
           <div
