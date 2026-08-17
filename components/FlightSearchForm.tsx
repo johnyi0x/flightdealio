@@ -99,6 +99,7 @@ export function FlightSearchForm() {
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
   const [cabinClass, setCabinClass] = useState<"economy" | "business">("economy");
+  const [searchStays, setSearchStays] = useState(true);
   const [travelersOpen, setTravelersOpen] = useState(false);
   const [cabinOpen, setCabinOpen] = useState(false);
   const [travelersStyle, setTravelersStyle] = useState<CSSProperties | null>(null);
@@ -250,8 +251,9 @@ export function FlightSearchForm() {
     }
 
     setBusy(true);
+    const staysQ = searchStays ? "&fdStays=1" : "&fdStays=0";
     window.location.assign(
-      `/live-search?flightSearch=${encodeURIComponent(flightSearch)}`,
+      `/live-search?flightSearch=${encodeURIComponent(flightSearch)}${staysQ}`,
     );
   }
 
@@ -357,6 +359,15 @@ export function FlightSearchForm() {
             </button>
           ))}
         </div>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-white/90 sm:text-sm">
+          <input
+            type="checkbox"
+            checked={searchStays}
+            onChange={(e) => setSearchStays(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          />
+          Also search stays
+        </label>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-search dark:border-slate-700 dark:bg-slate-900">

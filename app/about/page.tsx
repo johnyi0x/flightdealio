@@ -59,7 +59,8 @@ export default function AboutPage() {
           Enter your airports or cities, travel dates, cabin class, and how many travelers you are.
           FlightDealio runs a live search and shows results powered by our travel partners so you
           can compare prices and flight details, then complete booking with the seller you choose.
-          Stay suggestions for your destination also appear with those results.
+          To see hotels for the same destination, keep Show hotels checked on that live search
+          form and press Search again — stays open in a new tab.
         </p>
         <p>
           <Link
@@ -83,8 +84,9 @@ export default function AboutPage() {
             <Link href="/stays" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
               Stays
             </Link>{" "}
-            — hotel options for your destination appear with live flight results; opening them
-            loads partner hotel search in a new tab.
+            — search flights, then press Search again on live results with Show hotels checked.
+            Partner hotel results (Booking.com, Expedia, or another brand, depending on
+            destination) open in a new tab.
           </li>
           <li>
             <Link href="/cars" className="font-semibold text-brand-600 hover:underline dark:text-brand-400">
@@ -117,10 +119,10 @@ export default function AboutPage() {
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
           FlightDealio is a search and comparison front door. When you select a flight offer, you
           continue to a partner travel agency or brand to finish payment and receive your tickets.
-          Stay options work the same way: they open partner hotel results (including Expedia) in a
-          new tab so you can compare and book there. Prices and availability come from those
-          partners and can change; always confirm the final price on the booking site before you
-          pay.
+          Stay options work the same way: after you search again with Show hotels checked, partner
+          hotel results open in a new tab. The hotel brand can be Booking.com, Expedia, or another
+          partner depending on destination. Prices and availability come from those partners and
+          can change; always confirm the final price on the booking site before you pay.
         </p>
       </section>
 
@@ -141,8 +143,8 @@ export default function AboutPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Ready to go?</h2>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          Start with a flight search — stays show up with your results — or explore cars,
-          transfers, and eSIM for the rest of your trip.
+          Start with a flight search. On live results, keep Show hotels checked and press Search
+          again for stays — or explore cars, transfers, and eSIM for the rest of your trip.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link

@@ -24,6 +24,7 @@ export default function LiveSearchBridgePage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const flightSearch = params.get("flightSearch")?.trim();
+    const fdStays = params.get("fdStays");
 
     // No real search → do not fire Ads conversion
     if (!flightSearch) {
@@ -31,7 +32,9 @@ export default function LiveSearchBridgePage() {
       return;
     }
 
-    const next = `${wlHome}/?flightSearch=${encodeURIComponent(flightSearch)}`;
+    const staysQ =
+      fdStays === "0" ? "&fdStays=0" : fdStays === "1" ? "&fdStays=1" : "";
+    const next = `${wlHome}/?flightSearch=${encodeURIComponent(flightSearch)}${staysQ}`;
     setTarget(next);
     setReady(true);
 

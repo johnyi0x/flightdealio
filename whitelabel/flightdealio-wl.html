@@ -331,11 +331,27 @@
       }
       .tpwl-logo-header .fd-sub {
         margin: 8px 0 0;
-        max-width: 520px;
+        max-width: 560px;
         font-size: 15px;
         font-weight: 500;
         color: rgba(224, 242, 254, 0.9);
         line-height: 1.45;
+      }
+      .fd-stays-hint {
+        margin: 12px 0 0;
+        max-width: 560px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.28);
+        color: rgba(224, 242, 254, 0.95);
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.45;
+      }
+      .fd-stays-hint a {
+        color: #fff;
+        text-decoration: underline;
+        text-underline-offset: 2px;
       }
       .tpwl-search-header {
         padding: 24px 100px;
@@ -486,6 +502,7 @@
         <div class="tpwl__content">
           <h1>Fly farther with FlightDealio</h1>
           <p class="fd-sub">Search live fares, compare your options, and take off with the deal that fits your trip.</p>
+          <p class="fd-stays-hint">Need a hotel? Keep <strong>Show hotels</strong> checked on the form, then press Search. Stays open in a new tab for this destination (Booking.com, Expedia, or another partner). <a href="https://flightdealio.com/stays">How stays work</a></p>
         </div>
       </div>
     </header>
@@ -646,6 +663,55 @@
           scriptElement.src = `https://[:widget_domain:]/content?currency=${String(TPWL_EXTRA.currency).toLowerCase()}&trs=${TPWL_EXTRA.trs}&shmarker=${TPWL_EXTRA.marker}&destination=${destination}&target_host=${TPWL_EXTRA.domain}&locale=${TPWL_EXTRA.locale}&limit=6&powered_by=false&primary=%23${TPWL_EXTRA.link_color}&promo_id=4044&campaign_id=100`;
           element.appendChild(scriptElement);
         });
+      })();
+    </script>
+
+    <script>
+      // Auto-check "Show hotels" on the live search form.
+      // Official ?flightSearch= deep links cannot turn this on.
+      (function () {
+        function wantHotels() {
+          try {
+            return new URLSearchParams(window.location.search).get('fdStays') !== '0';
+          } catch (e) {
+            return true;
+          }
+        }
+        if (!wantHotels()) return;
+
+        function looksLikeHotelBox(el) {
+          var bits = [
+            el.getAttribute('name') || '',
+            el.getAttribute('id') || '',
+            el.getAttribute('aria-label') || '',
+            String(el.className || ''),
+          ];
+          if (el.id) {
+            var lab = document.querySelector('label[for="' + el.id.replace(/"/g, '') + '"]');
+            if (lab) bits.push(lab.textContent || '');
+          }
+          var wrap = el.closest('label') || el.parentElement;
+          if (wrap) bits.push(wrap.textContent || '');
+          var t = bits.join(' ').toLowerCase();
+          return /hotel|stay|booking\.com|expedia|hotels/.test(t);
+        }
+
+        function checkBoxes() {
+          var inputs = document.querySelectorAll('input[type="checkbox"]');
+          for (var i = 0; i < inputs.length; i++) {
+            var el = inputs[i];
+            if (!looksLikeHotelBox(el)) continue;
+            if (!el.checked) {
+              el.checked = true;
+              try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+              try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+            }
+          }
+        }
+
+        checkBoxes();
+        var obs = new MutationObserver(checkBoxes);
+        obs.observe(document.documentElement, { childList: true, subtree: true });
       })();
     </script>
   </body>
